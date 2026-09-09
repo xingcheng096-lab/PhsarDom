@@ -10,15 +10,16 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "latest",
-    "lucide-react": "latest",
-    "recharts": "latest"
+    "recharts": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
     "autoprefixer": "latest",
+    "gh-pages": "^6.3.0",
     "postcss": "latest",
     "tailwindcss": "^3.4.17"
   }
