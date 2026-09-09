@@ -1,0 +1,3 @@
+import { Home, SearchX } from 'lucide-react'
+import { Link } from 'react-router-dom'
+export default function NotFoundPage(){return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-5 text-center"><div><SearchX size={58} className="mx-auto text-slate-300"/><p className="mt-5 text-xs font-bold uppercase tracking-widest text-brand-600">PhsarDom · Error 404</p><h1 className="mt-2 text-3xl font-bold text-slate-900">Page not found</h1><p className="mt-3 text-slate-500">The requested page does not exist or may have moved.</p><Link to="/" className="btn-primary mt-6"><Home size={15}/> Return home</Link></div></main>}
