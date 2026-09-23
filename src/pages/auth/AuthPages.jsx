@@ -7,7 +7,8 @@ import {
   LockKeyhole,
   Mail,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useSession, ROLES } from "../../services/session";
 import BrandLogo from "../../components/common/BrandLogo";
 import {
   Alert,
@@ -81,14 +82,21 @@ function AuthShell({ title, subtitle, children }) {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { login } = useSession();
+  const from = params.get("from");
   const [error, setError] = useState("");
   const [submitting,setSubmitting]=useState(false);
+  const go = (role, fallback) => {
+    const dest = from && (from.startsWith("/buyer") || from.startsWith("/sales") || from.startsWith("/manager") || from.startsWith("/admin") || from.startsWith("/finance") || from.startsWith("/warehouse") || from.startsWith("/inventory-staff") || from.startsWith("/logistics") || from.startsWith("/support")) ? from : fallback;
+    return dest;
+  };
   const submit = (e) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     if (!data.get("email") || !data.get("password"))
       return setError("Enter both your business email and password.");
-    if(submitting)return;setSubmitting(true);setTimeout(()=>navigate("/buyer/dashboard"),400);
+    if(submitting)return;setSubmitting(true);login("buyer");setTimeout(()=>navigate(go("buyer","/buyer/dashboard")),400);
   };
   return (
     <AuthShell
@@ -132,14 +140,9 @@ export function LoginPage() {
         <span className="h-px flex-1 bg-slate-200" />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        {[
-          ["Buyer", "/buyer/dashboard"],
-          ["Account Executive", "/sales/dashboard"],
-          ["Sales Manager", "/manager/dashboard"],
-          ["Super Admin", "/admin/dashboard"],
-        ].map(([r, p]) => (
-          <button onClick={() => navigate(p)} className="btn-secondary" key={r}>
-            Login as {r}
+        {ROLES.map((r) => (
+          <button onClick={() => { login(r.key); navigate(r.home) }} className="btn-secondary" key={r.key}>
+            Login as {r.label}
           </button>
         ))}
       </div>

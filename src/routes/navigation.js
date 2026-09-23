@@ -1,4 +1,4 @@
-import { Activity, BarChart3, Bell, Boxes, BriefcaseBusiness, Building2, ClipboardCheck, ClipboardList, Contact, CreditCard, FileCheck2, FileText, Gauge, Package, Receipt, Settings, ShieldCheck, ShoppingCart, Tags, Truck, UserCog, Users, Warehouse } from 'lucide-react'
+import { Activity, Banknote, BarChart3, Bell, Boxes, BriefcaseBusiness, Building2, ClipboardCheck, ClipboardList, Contact, CreditCard, FileCheck2, FileText, Gauge, Headphones, Landmark, LifeBuoy, Package, PackageSearch, Receipt, Route, ScanLine, Settings, ShieldCheck, ShoppingCart, Tags, Truck, UserCog, Users, Warehouse } from 'lucide-react'
 
 export const buyerNav = [
   { label: 'MAIN', items: [{ label: 'Dashboard', path: '/buyer/dashboard', icon: Gauge }] },
@@ -34,3 +34,46 @@ export const adminNav = [
   { label: 'REPORTS', items: [{ label: 'Analytics', icon: BarChart3, children: [{ label: 'Sales Reports', path: '/admin/reports/sales' }, { label: 'Buyer Reports', path: '/admin/reports/buyers' }, { label: 'Inventory Reports', path: '/admin/reports/inventory' }, { label: 'Finance Reports', path: '/admin/reports/finance' }, { label: 'Executive Reports', path: '/admin/reports/executive' }] }] },
   { label: 'SYSTEM', items: [{ label: 'Users', path: '/admin/users', icon: UserCog }, { label: 'Roles', path: '/admin/roles', icon: ShieldCheck }, { label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck }, { label: 'Activity Logs', path: '/admin/activity-logs', icon: Activity }, { label: 'Settings', path: '/admin/settings', icon: Settings }] }
 ]
+
+export const financeNav = [
+  { label: 'MAIN', items: [{ label: 'Dashboard', path: '/finance/dashboard', icon: Gauge }] },
+  { label: 'CREDIT & RISK', items: [{ label: 'Credit Requests', path: '/finance/credit-requests', icon: Landmark }, { label: 'Buyer Credit', path: '/finance/buyers', icon: Users }, { label: 'Aging / Exposure', path: '/finance/aging', icon: BarChart3 }] },
+  { label: 'FINANCE', items: [{ label: 'Invoices', path: '/finance/invoices', icon: Receipt }, { label: 'Credit Notes', path: '/finance/credit-notes', icon: FileText }, { label: 'Payment Terms', path: '/finance/payment-terms', icon: BriefcaseBusiness }] },
+  { label: 'WORKSPACE', items: [{ label: 'Approvals', path: '/approvals', icon: ShieldCheck }, { label: 'Tasks', path: '/finance/tasks', icon: ClipboardCheck }, { label: 'Reports', path: '/finance/reports', icon: BarChart3 }, { label: 'Notifications', path: '/finance/notifications', icon: Bell }] }
+]
+
+export const warehouseNav = [
+  { label: 'MAIN', items: [{ label: 'Dashboard', path: '/warehouse/dashboard', icon: Gauge }] },
+  { label: 'WAREHOUSE OPS', items: [{ label: 'Locations & Bins', path: '/warehouse/locations', icon: Building2 }, { label: 'Receiving', path: '/warehouse/receiving', icon: PackageSearch }, { label: 'Reservations', path: '/warehouse/reservations', icon: ClipboardCheck }, { label: 'Picking', path: '/warehouse/picking', icon: ScanLine }, { label: 'Packing', path: '/warehouse/packing', icon: Package }] },
+  { label: 'STOCK', items: [{ label: 'Stock Levels', path: '/warehouse/stock', icon: Boxes }, { label: 'Backorders', path: '/warehouse/backorders', icon: Package }, { label: 'Stock Movements', path: '/warehouse/stock-movements', icon: ClipboardList }, { label: 'Adjustments', path: '/warehouse/adjustments', icon: ShieldCheck }] },
+  { label: 'WORKSPACE', items: [{ label: 'Tasks', path: '/warehouse/tasks', icon: ClipboardCheck }, { label: 'Notifications', path: '/warehouse/notifications', icon: Bell }] }
+]
+
+export const inventoryNav = [
+  { label: 'MAIN', items: [{ label: 'Dashboard', path: '/inventory-staff/dashboard', icon: Gauge }] },
+  { label: 'OPERATIONS', items: [{ label: 'Receiving', path: '/inventory-staff/receiving', icon: PackageSearch }, { label: 'Picking', path: '/inventory-staff/picking', icon: ScanLine }, { label: 'Packing', path: '/inventory-staff/packing', icon: Package }] },
+  { label: 'STOCK', items: [{ label: 'Stock Count', path: '/inventory-staff/stock-count', icon: ClipboardList }, { label: 'Movements', path: '/inventory-staff/movements', icon: Boxes }, { label: 'Stock Levels', path: '/inventory-staff/stock', icon: BarChart3 }] },
+  { label: 'WORKSPACE', items: [{ label: 'Tasks', path: '/inventory-staff/tasks', icon: ClipboardCheck }, { label: 'Notifications', path: '/inventory-staff/notifications', icon: Bell }] }
+]
+
+export const logisticsNav = [
+  { label: 'MAIN', items: [{ label: 'Dashboard', path: '/logistics/dashboard', icon: Gauge }] },
+  { label: 'OPERATIONS', items: [{ label: 'Shipment Planning', path: '/logistics/shipment-planning', icon: Route }, { label: 'Shipments', path: '/logistics/shipments', icon: Truck }, { label: 'Carriers', path: '/logistics/carriers', icon: Truck }] },
+  { label: 'DELIVERY', items: [{ label: 'Deliveries', path: '/logistics/deliveries', icon: Package }, { label: 'Delivery Exceptions', path: '/logistics/discrepancies', icon: LifeBuoy }] },
+  { label: 'WORKSPACE', items: [{ label: 'Tasks', path: '/logistics/tasks', icon: ClipboardCheck }, { label: 'Reports', path: '/logistics/reports', icon: BarChart3 }, { label: 'Notifications', path: '/logistics/notifications', icon: Bell }] }
+]
+
+export const supportNav = [
+  { label: 'MAIN', items: [{ label: 'Dashboard', path: '/support/dashboard', icon: Gauge }] },
+  { label: 'CUSTOMER SERVICE', items: [{ label: 'Buyers', path: '/support/buyers', icon: Users }, { label: 'Orders', path: '/support/orders', icon: ShoppingCart }, { label: 'Shipments', path: '/support/shipments', icon: Truck }, { label: 'Invoices', path: '/support/invoices', icon: Receipt }, { label: 'Credit Notes', path: '/support/credit-notes', icon: FileText }] },
+  { label: 'AUDIT & SUPPORT', items: [{ label: 'Activity', path: '/support/activity', icon: Activity }, { label: 'Help Center', path: '/support/help', icon: Headphones }] },
+  { label: 'WORKSPACE', items: [{ label: 'Tasks', path: '/support/tasks', icon: ClipboardCheck }, { label: 'Notifications', path: '/support/notifications', icon: Bell }] }
+]
+
+export const departmentNav = {
+  finance: financeNav,
+  warehouse: warehouseNav,
+  inventory: inventoryNav,
+  logistics: logisticsNav,
+  support: supportNav,
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Mail, Save, ShieldCheck, UserRound } from "lucide-react";
+import { Check, Eye, EyeOff, Mail, Pencil, Save, ShieldCheck, UserRound } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import {
   Alert,
@@ -8,6 +8,18 @@ import {
   SelectInput,
   TextInput,
 } from "../../components/ui";
+import { ROLES } from "../../services/session";
+import { FIELD_ACCESS, permissionMatrix, fieldAccess } from "../../services/permissions";
+
+const fieldTone = {
+  'View': 'bg-emerald-50 text-emerald-700',
+  'View own': 'bg-teal-50 text-teal-700',
+  'Edit': 'bg-blue-50 text-blue-700',
+  'Restricted': 'bg-amber-50 text-amber-800',
+  'Request': 'bg-amber-50 text-amber-800',
+  'Approve': 'bg-violet-50 text-violet-700',
+  'Hidden': 'bg-white text-slate-300 ring-1 ring-slate-100',
+}
 
 export function ProfilePage({ staff = false }) {
   const [saved, setSaved] = useState(false);
@@ -321,6 +333,61 @@ export function PermissionsPage() {
           </table>
         </div>
       </Card>
+
+      <div className="mt-5">
+        <h3 className="mb-3 text-sm font-semibold text-slate-900">ERP role → module → action map</h3>
+        <p className="mb-3 max-w-3xl text-xs leading-5 text-slate-500">The permission engine resolves <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700">can(role, module, action)</code>. Role guards, sidebar visibility, and module actions all consult this matrix.</p>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {ROLES.slice(1).map((r) => {
+            const modules = Object.entries(permissionMatrix[r.key] || {}).filter(([m]) => m !== '*').map(([m, actions]) => ({ m, actions }))
+            return (
+              <Card key={r.key} title={r.label} bodyClassName="p-4">
+                <div className="flex flex-wrap gap-1.5">
+                  {modules.length ? modules.map(({ m, actions }) => (
+                    <span key={m} className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200">{m} · {['view', 'approve'].filter((a) => actions.includes(a)).join('/')}</span>
+                  )) : <span className="text-[11px] text-slate-400">Wildcard access (all modules)</span>}
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <h3 className="mb-1 text-sm font-semibold text-slate-900">ERP field-level access</h3>
+        <p className="mb-3 max-w-3xl text-xs leading-5 text-slate-500">Sensitive fields are resolved by <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700">fieldAccess(role, field)</code> — the third axis of the Role → Module → Action → <strong>Field</strong> model, ready for Phase 2 field masking.</p>
+        <Card bodyClassName="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px]">
+              <thead className="bg-slate-50 text-xs text-slate-500">
+                <tr>
+                  <th className="table-cell">Sensitive field</th>
+                  {ROLES.map((r) => <th className="table-cell" key={r.key}>{r.label.split(' / ')[0]}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {FIELD_ACCESS.map((f) => (
+                  <tr key={f.field} className="hover:bg-slate-50">
+                    <td className="table-cell font-semibold">{f.field}</td>
+                    {ROLES.map((r) => {
+                      const level = fieldAccess(r.key, f.field)
+                      return (
+                        <td className="table-cell" key={r.key}>
+                          <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold ${fieldTone[level] || fieldTone.Hidden}`}>
+                            {level === 'Hidden' ? <EyeOff size={11} /> : level === 'Edit' ? <Pencil size={11} /> : <Eye size={11} />}
+                            {level}
+                          </span>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+        <p className="mt-3 text-[11px] text-slate-400">Field-level enforcement (masking inputs and redacting exports) ships with the Phase 2 workspaces; the resolution layer above is live and testable now.</p>
+      </div>
     </>
   );
 }

@@ -183,6 +183,11 @@ function ProductCard({ product }) {
           </span>
         </div>
 
+        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+          <Truck size={13} />
+          Ships in {product.leadTime}
+        </p>
+
         <p className="mt-3 rounded-lg bg-brand-50 px-2.5 py-2 text-xs font-medium text-brand-800 transition-colors duration-200 group-hover:bg-brand-100/70">
           Up to {volumeSavings}% savings at volume
         </p>
@@ -219,7 +224,7 @@ export function HomePage() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-cyan-500">
+      <section className="relative isolate overflow-hidden bg-cyan-900">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(14,165,233,.26),transparent_35%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom_right,rgba(15,23,42,.06),rgba(2,6,23,.82))]" />
         <div className="pointer-events-none absolute -right-32 top-10 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl motion-safe:animate-[pulse_8s_ease-in-out_infinite]" />
@@ -826,7 +831,7 @@ export function ProductDetailPage() {
                 {product.category} · SKU {product.sku}
               </p>
 
-              <div className="mt-5 grid grid-cols-2 gap-4 border-y py-4 sm:grid-cols-3">
+              <div className="mt-5 grid grid-cols-2 gap-4 border-y py-4 sm:grid-cols-4">
                 <span>
                   <small className="block text-slate-500">MOQ</small>
                   <strong>
@@ -844,6 +849,11 @@ export function ProductDetailPage() {
                     Available stock
                   </small>
                   <strong>{product.stock.toLocaleString()}</strong>
+                </span>
+
+                <span>
+                  <small className="block text-slate-500">Lead time</small>
+                  <strong>{product.leadTime}</strong>
                 </span>
               </div>
 
@@ -877,7 +887,12 @@ export function ProductDetailPage() {
                             <span className="inline-flex items-center gap-2">
                               {item.min}
                               {item.max ? ` - ${item.max}` : "+"}
-                              {active && (
+                              {item.max === null && (
+                                <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                                  Best price
+                                </span>
+                              )}
+                              {active && item.max !== null && (
                                 <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
                                   Current tier
                                 </span>
@@ -921,6 +936,37 @@ export function ProductDetailPage() {
                 </span>
               </div>
 
+              {(() => {
+                const nextTier = product.tiers.find((item) => item.min > quantity)
+                return nextTier ? (
+                  <p className="mt-3 rounded-md bg-brand-50 px-3 py-2 text-xs font-medium text-brand-800">
+                    Add {nextTier.min - quantity} more units to unlock{" "}
+                    {currency(nextTier.price)}/unit.
+                  </p>
+                ) : (
+                  <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                    Best wholesale price applied for this quantity.
+                  </p>
+                )
+              })()}
+
+              <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-violet-700">
+                    Verified buyer contract price
+                  </span>
+                  <span className="text-sm font-bold text-violet-800">
+                    {currency(Math.round(tier.price * 0.94 * 100) / 100)}
+                  </span>
+                </div>
+                <Link
+                  to="/login"
+                  className="mt-1 block text-[11px] font-medium text-violet-600 underline-offset-2 hover:underline"
+                >
+                  Login to unlock your contract pricing
+                </Link>
+              </div>
+
               <Link
                 to="/login"
                 className="btn-primary group mt-5 w-full py-3 transition-all duration-300 hover:-translate-y-0.5"
@@ -957,7 +1003,7 @@ export function ProductDetailPage() {
           <Reveal delay={80}>
             <Card title="Documents">
               <button
-                onClick={() => alert("Product data sheet downloaded.")}
+                onClick={() => downloadMockDocument(`${product.name} data sheet`)}
                 className="flex w-full items-center gap-2 border-b py-3 text-brand-700 transition-all duration-200 hover:translate-x-1"
               >
                 <FileIcon />
@@ -965,7 +1011,7 @@ export function ProductDetailPage() {
               </button>
 
               <button
-                onClick={() => alert("Warranty document downloaded.")}
+                onClick={() => downloadMockDocument(`${product.name} warranty`)}
                 className="flex w-full items-center gap-2 py-3 text-brand-700 transition-all duration-200 hover:translate-x-1"
               >
                 <FileIcon />
@@ -985,6 +1031,14 @@ function FileIcon() {
       PDF
     </span>
   );
+}
+
+function downloadMockDocument(name) {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(new Blob([`PhsarDom Wholesale\n${name}\nProduct documentation available in the local frontend workspace.`], { type: 'text/plain' }))
+  link.download = `${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.txt`
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 export function CategoriesPage() {
