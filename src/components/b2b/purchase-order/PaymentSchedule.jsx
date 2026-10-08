@@ -1,0 +1,1 @@
+export default function PaymentSchedule({ schedule = [] }) { return <div className="space-y-2">{(Array.isArray(schedule) ? schedule : []).map((item, index) => <div className="flex justify-between text-xs" key={`${item.label}-${index}`}><span>{item.label}</span><strong>{item.status}</strong></div>)}</div> }

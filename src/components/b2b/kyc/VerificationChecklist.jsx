@@ -1,0 +1,1 @@
+export default function VerificationChecklist({ items = [] }) { return <div className="space-y-2">{items.map((item) => <div className="flex justify-between text-xs" key={item}>{item}<span className="font-semibold text-amber-700">Pending</span></div>)}</div> }

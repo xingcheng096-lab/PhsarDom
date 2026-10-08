@@ -1,0 +1,23 @@
+import { ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Card } from '../../../components/ui'
+import { currency, number } from '../../../utils/format'
+
+export default function TieredPricingPanel({ product }) {
+  const [quantity, setQuantity] = useState(product.moq)
+  const tiers = Array.isArray(product.tiers) ? product.tiers : []
+  const activeTier = [...tiers].reverse().find((t) => quantity >= t.min) || tiers[0] || { min: product.moq, price: product.price, max: null }
+  const nextTier = tiers.find((t) => t.min > quantity)
+  const unitPrice = activeTier.price
+  const subtotal = quantity * unitPrice
+  const firstSubtotal = quantity * (tiers[0]?.price || unitPrice)
+  const savings = Math.max(0, firstSubtotal - subtotal)
+  const contractPrice = Math.round(unitPrice * 0.94 * 100) / 100
+  return <div className="space-y-5">
+    <Card bodyClassName="p-4"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Corporate account</p><strong className="text-sm text-slate-900">Atlas Hospitality Group</strong><p className="text-xs text-slate-500">Net-60 · verified buyer account</p></div><div className="min-w-[240px] flex-1 sm:max-w-sm"><div className="flex justify-between text-xs"><span className="text-slate-500">Credit used</span><strong>{currency(162500)} / {currency(250000)}</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full w-[65%] rounded-full bg-brand-600" /></div><p className="mt-1 text-[11px] text-slate-500">{currency(87500)} approved credit remaining</p></div></div></Card>
+    <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]"><Card title="Tier pricing" subtitle="Wholesale unit price by order quantity" bodyClassName="p-0"><div className="overflow-x-auto"><table className="w-full min-w-[480px] text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3 text-left">Quantity</th><th className="p-3 text-left">Unit price</th><th className="p-3 text-right">Tier</th></tr></thead><tbody>{tiers.map((t) => { const active = quantity >= t.min && (!t.max || quantity <= t.max); return <tr key={t.min} className={`border-t ${active ? 'bg-brand-50' : 'hover:bg-slate-50'}`}><td className="p-3 font-semibold">{t.min}{t.max ? ` - ${t.max}` : '+'}</td><td className="p-3 font-semibold">{currency(t.price)}</td><td className="p-3 text-right">{t.max === null ? <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white">Best price</span> : active ? <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold text-brand-700">Current tier</span> : null}</td></tr> })}</tbody></table></div></Card>
+      <Card title="Quantity price calculator" subtitle="Estimate your wholesale cost" bodyClassName="p-5"><label className="block"><span className="form-label">Order quantity</span><div className="flex items-center gap-2"><button className="btn-secondary" onClick={() => setQuantity(Math.max(product.moq, quantity - 1))}>−</button><input type="number" min={product.moq} value={quantity} onChange={(e) => setQuantity(Math.max(product.moq, Number(e.target.value) || product.moq))} className="form-control text-center" /><button className="btn-secondary" onClick={() => setQuantity(quantity + 1)}>+</button></div><span className="mt-1.5 block text-xs text-slate-500">Minimum order {product.moq} {product.unit}s</span></label><dl className="mt-4 space-y-2.5 border-t border-slate-100 pt-4 text-sm"><div className="flex justify-between"><dt className="text-slate-500">Unit price</dt><dd className="font-semibold">{currency(unitPrice)}</dd></div><div className="flex justify-between"><dt className="text-slate-500">Total</dt><dd className="font-semibold">{currency(subtotal)}</dd></div>{savings > 0 && <div className="flex justify-between text-emerald-700"><dt>Savings</dt><dd>-{currency(savings)}</dd></div>}</dl>{nextTier ? <p className="mt-3 rounded-md bg-brand-50 px-3 py-2 text-xs text-brand-800">Add {number(nextTier.min - quantity)} more units to unlock {currency(nextTier.price)}/unit.</p> : <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">Best price applied.</p>}<div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 p-3 text-xs"><div className="flex justify-between"><span className="font-semibold text-violet-700">Contract price</span><span className="font-bold text-violet-800">{currency(contractPrice)}</span></div></div><Link to="/buyer/rfqs/new" className="btn-primary mt-5 w-full py-2.5 text-xs">Request a quote <ArrowRight size={14} /></Link></Card>
+    </div>
+  </div>
+}

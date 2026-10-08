@@ -29,7 +29,7 @@ export default function PublicLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center px-4 sm:px-6">
           <Link to="/" className="flex shrink-0 items-center gap-2 text-brand-800">
             <BrandLogo variant="public" />

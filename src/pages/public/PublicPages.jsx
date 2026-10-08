@@ -18,7 +18,7 @@ import { products } from "../../data";
 import { currency } from "../../utils/format";
 import { Card, SelectInput, StatusBadge } from "../../components/ui";
 import BrandLogo from "../../components/common/BrandLogo";
-
+import heroImage from "../../assets/phsardom-hero.png";
 const categories = [
   {
     name: "Electronics",
@@ -58,7 +58,7 @@ const categories = [
   },
 ];
 
-function useReveal(options = {}) {
+export function useReveal(options = {}) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
 
@@ -97,7 +97,7 @@ function useReveal(options = {}) {
   return { ref, visible };
 }
 
-function Reveal({
+export function Reveal({
   children,
   className = "",
   delay = 0,
@@ -129,7 +129,7 @@ function Reveal({
   );
 }
 
-function ProductCard({ product }) {
+export function ProductCard({ product }) {
   const volumeSavings = Math.max(
     0,
     Math.round((1 - product.tiers.at(-1).price / product.price) * 100),
@@ -196,290 +196,241 @@ function ProductCard({ product }) {
   );
 }
 
+
+
 export function HomePage() {
   const stats = [
-    ["12K+", "Business products"],
-    ["304", "Verified buyers"],
-    ["$2.8M", "Monthly volume"],
-    ["98.4%", "On-time delivery"],
-  ];
-
-  const benefits = [
-    [
-      Boxes,
-      "Order by MOQ",
-      "Minimum order quantities keep wholesale prices competitive and fulfillment efficient.",
-    ],
-    [
-      BadgeDollarSign,
-      "Unlock tier pricing",
-      "Your unit cost decreases automatically as order quantities move through pricing tiers.",
-    ],
-    [
-      Truck,
-      "Coordinate delivery",
-      "Track purchase orders and commercial freight from allocation through delivery.",
-    ],
+    { Icon: Boxes, value: "12K+", label: "Business Products" },
+    { Icon: Building2, value: "304", label: "Verified Buyers" },
+    { Icon: BadgeDollarSign, value: "$2.8M", label: "Monthly Volume" },
+    { Icon: Truck, value: "98.4%", label: "On-Time Delivery" },
   ];
 
   return (
-    <>
-      <section className="relative isolate overflow-hidden bg-cyan-900">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(14,165,233,.26),transparent_35%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom_right,rgba(15,23,42,.06),rgba(2,6,23,.82))]" />
-        <div className="pointer-events-none absolute -right-32 top-10 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl motion-safe:animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="pointer-events-none absolute -left-28 bottom-0 h-80 w-80 rounded-full bg-blue-700/10 blur-3xl motion-safe:animate-[pulse_10s_ease-in-out_infinite]" />
+    <main>
+      {/* HERO SECTION */}
+      <section className="relative isolate min-h-[850px] overflow-hidden bg-[#052c4a] text-white">
+        {/* Warehouse background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url("${heroImage}")`,
+            backgroundPosition: "center center",
+          }}
+        />
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-20 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-28">
-          <div>
-            <div className="motion-safe:animate-[fadeUp_.65s_ease-out_both]">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[.18em] text-cyan-300 backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" />
-                PhsarDom · B2B Wholesale Platform
-              </span>
+        {/* Dark overlay for readable text */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#032b49]/95 via-[#032b49]/65 to-[#032b49]/10" />
+
+        {/* Subtle bottom overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#032b49]/65 via-transparent to-transparent" />
+
+        <div className="relative mx-auto flex min-h-[850px] max-w-[1600px] flex-col justify-between gap-12 px-6 pb-12 pt-20 lg:px-12 xl:px-16">
+          {/* Main hero content */}
+          <div className="relative z-10 max-w-[670px]">
+            <div className="inline-flex items-center gap-3 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-cyan-300 backdrop-blur-sm">
+              <span className="h-2 w-2 rounded-full bg-cyan-400" />
+              PHSARDOM · B2B WHOLESALE PLATFORM
             </div>
 
-            <h1 className="mt-6 max-w-3xl text-4xl font-bold tracking-tight text-white motion-safe:animate-[fadeUp_.7s_.08s_ease-out_both] sm:text-5xl lg:text-6xl lg:leading-[1.05]">
+            <h1 className="mt-9 text-[46px] font-extrabold leading-[1.12] tracking-tight sm:text-6xl xl:text-[68px]">
               Source Better.
               <br />
-              <span className="bg-gradient-to-r from-cyan-300 via-sky-300 to-blue-400 bg-clip-text text-transparent">
+
+              <span className="bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-400 bg-clip-text text-transparent">
                 Negotiate Faster.
               </span>
+
               <br />
               Buy at Scale.
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 motion-safe:animate-[fadeUp_.7s_.16s_ease-out_both] sm:text-lg">
-              PhsarDom connects verified businesses with commercial products,
-              negotiated pricing, structured RFQs, and accountable purchase
-              order workflows.
+            <p className="mt-7 max-w-[610px] text-base leading-8 text-slate-200 sm:text-lg">
+              PhsarDom connects verified businesses with commercial
+              products, negotiated pricing, structured RFQs, and
+              accountable purchase order workflows.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3 motion-safe:animate-[fadeUp_.7s_.24s_ease-out_both]">
+            {/* Actions */}
+            <div className="mt-8 flex flex-wrap gap-4">
               <Link
                 to="/register"
-                className="group inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-400 hover:shadow-xl hover:shadow-cyan-500/30 active:scale-[.98]"
+                className="inline-flex min-h-14 items-center justify-center gap-5 rounded-lg bg-blue-600 px-7 font-semibold text-white shadow-xl shadow-blue-950/30 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-500"
               >
                 Create Business Account
-                <ArrowRight
-                  size={16}
-                  className="transition-transform duration-300 group-hover:translate-x-1"
-                />
+                <ArrowRight size={19} />
               </Link>
 
               <Link
                 to="/products"
-                className="inline-flex items-center rounded-lg border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/10 active:scale-[.98]"
+                className="inline-flex min-h-14 items-center justify-center rounded-lg border border-white/40 bg-white/10 px-8 font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
               >
                 Browse Products
               </Link>
             </div>
 
-            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-xs text-slate-400 motion-safe:animate-[fadeUp_.7s_.32s_ease-out_both]">
-              <span>Verified business buyers</span>
-              <span>MOQ & tier pricing</span>
-              <span>RFQ & quotation workflow</span>
+            {/* Trust indicators */}
+            <div className="mt-9 flex max-w-[650px] flex-wrap items-center gap-x-7 gap-y-4 text-xs text-slate-200">
+              <span className="flex items-center gap-2">
+                <ShieldCheck
+                  size={24}
+                  className="shrink-0 text-sky-400"
+                />
+                Verified business buyers
+              </span>
+
+              <span className="flex items-center gap-2">
+                <BadgeDollarSign
+                  size={24}
+                  className="shrink-0 text-sky-400"
+                />
+                MOQ & tier pricing
+              </span>
+
+              <span className="flex items-center gap-2">
+                <PackageCheck
+                  size={24}
+                  className="shrink-0 text-sky-400"
+                />
+                RFQ to quotation workflow
+              </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {stats.map(([value, label], index) => (
+          {/* Floating RFQ widget */}
+          <div className="pointer-events-none absolute right-[33%] top-[17%] z-10 hidden rounded-2xl border border-white/25 bg-[#123e60]/75 p-5 shadow-2xl backdrop-blur-lg 2xl:block">
+            <div className="flex items-center gap-4">
+              <span className="rounded-xl bg-blue-600 p-3">
+                <PackageCheck size={26} />
+              </span>
+
+              <div>
+                <p className="text-sm font-semibold">RFQ Requests</p>
+                <strong className="text-2xl">24</strong>
+                <p className="text-xs text-slate-300">
+                  Pending Review
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Purchase order widget */}
+          <div className="pointer-events-none absolute right-[7%] top-[25%] z-10 hidden w-52 rotate-[-5deg] rounded-2xl bg-white p-5 text-slate-900 shadow-2xl 2xl:block">
+            <p className="text-sm font-bold">Purchase Orders</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Growth Overview
+            </p>
+
+            <div className="mt-4 flex h-20 items-end gap-2">
+              {[30, 44, 38, 60, 75, 90].map((height, index) => (
+                <div
+                  key={index}
+                  className="flex-1 rounded-t bg-blue-500"
+                  style={{ height: `${height}%` }}
+                />
+              ))}
+            </div>
+
+            <p className="mt-3 font-bold text-blue-600">+28%</p>
+          </div>
+
+          {/* Statistics — separate row, no overlap */}
+          <div className="relative z-10 grid w-full grid-cols-2 gap-3 lg:ml-auto lg:w-[64%] lg:grid-cols-4">
+            {stats.map(({ Icon, value, label }) => (
               <div
                 key={label}
-                className="group rounded-xl border border-white/10 bg-white/[0.06] p-5 opacity-0 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-cyan-300/20 hover:bg-white/[0.09] hover:shadow-2xl hover:shadow-black/20 motion-safe:animate-[fadeUp_.7s_ease-out_forwards] motion-reduce:opacity-100 sm:p-6"
-                style={{ animationDelay: `${120 + index * 90}ms` }}
+                className="flex min-h-[104px] items-center gap-3 rounded-xl border border-white/25 bg-[#082f50]/80 px-4 py-5 shadow-xl backdrop-blur-lg"
               >
-                <strong className="block text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  {value}
-                </strong>
-                <p className="mt-2 text-[11px] font-medium uppercase tracking-[.14em] text-slate-400 transition-colors group-hover:text-slate-300">
-                  {label}
-                </p>
+                <Icon
+                  size={28}
+                  className="shrink-0 text-sky-400"
+                />
+
+                <div className="min-w-0">
+                  <strong className="block text-xl font-extrabold xl:text-2xl">
+                    {value}
+                  </strong>
+
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                    {label}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8 lg:py-20">
-        <Reveal>
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.18em] text-brand-600">
-                Product range
+      {/* WHOLESALE CATEGORIES */}
+      <section className="mx-auto max-w-7xl px-6 py-20">
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
+            Product Range
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-slate-900">
+            Wholesale Categories
+          </h2>
+
+          <p className="mt-2 text-slate-500">
+            Explore commercial categories for volume procurement.
+          </p>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-3">
+          {categories.map((category) => (
+            <Link
+              key={category.slug}
+              to={`/categories/${category.slug}`}
+              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-blue-300 hover:shadow-lg"
+            >
+              <span className="text-xs font-bold text-blue-600">
+                {category.icon}
+              </span>
+
+              <h3 className="mt-3 font-bold text-slate-900">
+                {category.name}
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-500">
+                {category.description}
               </p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                Wholesale categories
-              </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                Explore commercial categories designed for verified B2B
-                purchasing and volume procurement.
-              </p>
-            </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* FEATURED PRODUCTS */}
+      <section className="bg-slate-50 py-20">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-3xl font-bold text-slate-900">
+              Featured Wholesale Products
+            </h2>
 
             <Link
-              to="/categories"
-              className="group hidden items-center gap-1.5 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-700 sm:flex"
+              to="/products"
+              className="font-semibold text-blue-600 hover:text-blue-700"
             >
-              View all
-              <ChevronRight
-                size={16}
-                className="transition-transform duration-200 group-hover:translate-x-1"
-              />
+              Browse Catalog →
             </Link>
           </div>
-        </Reveal>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((cat, index) => (
-            <Reveal key={cat.name} delay={index * 70}>
-              <Link
-                to={`/categories/${cat.slug}`}
-                className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-300 hover:shadow-xl hover:shadow-slate-200/60"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 font-bold text-brand-600 transition-all duration-300 group-hover:scale-105 group-hover:bg-brand-50 group-hover:text-brand-700">
-                  {cat.icon}
-                </span>
-
-                <span className="min-w-0">
-                  <strong className="block text-sm font-semibold text-slate-900">
-                    {cat.name}
-                  </strong>
-                  <small className="mt-1 block leading-5 text-slate-500">
-                    {cat.description}
-                  </small>
-                </span>
-
-                <ChevronRight
-                  size={17}
-                  className="ml-auto shrink-0 text-slate-300 transition-all duration-300 group-hover:translate-x-1 group-hover:text-brand-600"
-                />
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-y border-slate-200 bg-slate-50/80">
-        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8 lg:py-20">
-          <Reveal>
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[.18em] text-brand-600">
-                  Curated wholesale
-                </p>
-                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                  Featured wholesale products
-                </h2>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                  Selected products with commercial MOQ and volume-based
-                  pricing.
-                </p>
-              </div>
-
-              <Link
-                to="/products"
-                className="group inline-flex items-center gap-1 text-sm font-semibold text-brand-600"
-              >
-                Browse catalog
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </Link>
-            </div>
-          </Reveal>
-
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {products.slice(0, 3).map((product, index) => (
-              <Reveal key={product.id} delay={index * 90}>
-                <ProductCard product={product} />
-              </Reveal>
+          <div className="grid gap-6 md:grid-cols-3">
+            {products.slice(0, 3).map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+              />
             ))}
           </div>
         </div>
       </section>
-
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8 lg:py-20">
-        <Reveal>
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-brand-600">
-              Built for B2B procurement
-            </p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              A structured wholesale buying experience
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              From minimum order quantities to pricing tiers and delivery
-              coordination, PhsarDom supports the complete purchasing flow.
-            </p>
-          </div>
-        </Reveal>
-
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {benefits.map(([Icon, title, text], index) => (
-            <Reveal key={title} delay={index * 90}>
-              <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-300 hover:shadow-xl hover:shadow-slate-200/50">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-500 via-cyan-400 to-blue-500" />
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold tracking-[.16em] text-slate-400">
-                    0{index + 1}
-                  </span>
-
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-105 group-hover:bg-brand-100">
-                    <Icon size={21} />
-                  </span>
-                </div>
-
-                <h3 className="mt-6 text-lg font-semibold text-slate-950">
-                  {title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      <section className="px-5 pb-16 sm:px-6 lg:px-8 lg:pb-20">
-        <Reveal>
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-2xl bg-slate-950 px-6 py-10 text-white shadow-2xl sm:px-8 lg:px-10">
-            <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-blue-600/10 blur-3xl" />
-
-            <div className="relative flex flex-col justify-between gap-7 md:flex-row md:items-center">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[.18em] text-cyan-300">
-                  Start purchasing at scale
-                </p>
-                <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
-                  Ready for business-grade purchasing?
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                  Register your organization for verification, negotiated
-                  pricing, RFQs, purchase orders, and commercial delivery
-                  tracking.
-                </p>
-              </div>
-
-              <Link
-                to="/register"
-                className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-cyan-50 active:scale-[.98]"
-              >
-                Register your business
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </Link>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-    </>
+    </main>
   );
 }
+
+
 
 export function ProductsPage() {
   const [params] = useSearchParams();
@@ -644,19 +595,16 @@ export function ProductsPage() {
         </div>
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <Reveal direction="left">
-            <aside className="surface-card hidden h-fit p-4 lg:block">
-              <h2 className="mb-4 flex items-center gap-2 border-b pb-3 font-semibold">
-                <SlidersHorizontal size={16} />
-                Refine results
-              </h2>
-              {filters}
-            </aside>
-          </Reveal>
+          <aside className="surface-card sticky top-[calc(var(--public-navbar-height)+16px)] z-30 hidden h-fit max-h-[calc(100vh-var(--public-navbar-height)-24px)] self-start overflow-y-auto p-4 lg:block">
+            <h2 className="mb-4 flex items-center gap-2 border-b pb-3 font-semibold">
+              <SlidersHorizontal size={16} />
+              Refine results
+            </h2>
+            {filters}
+          </aside>
 
           <div className="min-w-0">
-            <Reveal delay={80}>
-              <div className="surface-card flex flex-col gap-3 p-3 sm:flex-row">
+            <div className="surface-card sticky top-[var(--public-navbar-height)] z-40 flex flex-col gap-3 border-slate-200 bg-white p-3 shadow-md sm:flex-row">
                 <label className="relative flex-1">
                   <span className="sr-only">Search products</span>
                   <Search
@@ -708,8 +656,7 @@ export function ProductsPage() {
                     <List className="mx-auto" size={17} />
                   </button>
                 </span>
-              </div>
-            </Reveal>
+            </div>
 
             <p aria-live="polite" className="my-4 text-xs text-slate-500">
               Showing {filtered.length} product

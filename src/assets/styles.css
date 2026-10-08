@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --public-navbar-height: 4rem;
+}
+
 @layer base {
   * { box-sizing: border-box; }
   html { @apply bg-slate-100; }

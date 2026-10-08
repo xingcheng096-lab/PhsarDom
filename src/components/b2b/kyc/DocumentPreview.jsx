@@ -1,0 +1,1 @@
+export default function DocumentPreview({ document }) { return <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500">{document?.name || 'Select a document to preview'}</div> }

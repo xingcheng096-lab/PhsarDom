@@ -1,0 +1,3 @@
+import { Card } from '../../ui'
+import { currency } from '../../../utils/format'
+export default function CreditUsageCard({ used = 162500, approved = 250000, terms = 'Net-60' }) { const pct = Math.min(100, Math.round((used / approved) * 100)); return <Card bodyClassName="p-4"><div className="flex justify-between text-xs"><span className="font-semibold text-slate-700">Corporate account · {terms}</span><strong>{currency(used)} / {currency(approved)}</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand-600" style={{ width: `${pct}%` }} /></div><p className="mt-1 text-[11px] text-slate-500">{currency(Math.max(0, approved - used))} approved credit remaining</p></Card> }

@@ -8,7 +8,7 @@ import { FinanceLayout, InventoryLayout, LogisticsLayout, SupportLayout, Warehou
 import RoleGuard from './components/common/RoleGuard'
 import { SessionProvider, useSession } from './services/session'
 import { ErpProvider } from './services/erpStore'
-import { AboutPage, CategoriesPage, CategoryPage, HomePage, LegalPage, ProductDetailPage, ProductsPage } from './pages/public/PublicPages'
+import { AboutPage, CategoriesPage, CategoryPage, HomePage, LegalPage, ProductDetailPage, ProductsPage } from './pages/public'
 import { ForgotPasswordPage, LoginPage, PendingApprovalPage, RegisterPage } from './pages/auth/AuthPages'
 import ResourcePage from './pages/shared/ResourcePage'
 import DetailPage from './pages/shared/DetailPage'

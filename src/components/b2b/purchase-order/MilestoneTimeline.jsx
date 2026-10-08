@@ -1,0 +1,1 @@
+export default function MilestoneTimeline({ milestones = [] }) { return <ol className="space-y-2">{(Array.isArray(milestones) ? milestones : []).map((item, index) => <li className="text-xs" key={`${item.label}-${index}`}><strong>{item.label}</strong><span className="ml-2 text-slate-500">{item.date} · {item.status}</span></li>)}</ol> }

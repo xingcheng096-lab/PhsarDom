@@ -1,0 +1,1 @@
+export default function DocumentList({ documents = [] }) { return <div className="space-y-2">{(Array.isArray(documents) ? documents : []).map((doc) => <div className="flex justify-between text-xs" key={doc.id || doc.name}><span>{doc.name}</span><strong>{doc.status || 'Pending'}</strong></div>)}</div> }
