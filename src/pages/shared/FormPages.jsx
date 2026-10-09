@@ -25,6 +25,7 @@ export function RfqFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const submit = (e) => {
     e.preventDefault();
+    if (submitting) return;
     const fd = new FormData(e.currentTarget);
     const quantity = Number(fd.get("quantity"));
     const next = {};
@@ -91,7 +92,8 @@ export function RfqFormPage() {
               label="Required delivery date"
             />
           </div>
-          {selectedProduct && <div className="mt-4 grid gap-3 rounded-lg border border-brand-100 bg-brand-50/60 p-4 sm:grid-cols-4"><span><small className="block text-slate-500">Selected product</small><strong className="text-xs">{selectedProduct.name}</strong></span><span><small className="block text-slate-500">MOQ</small><strong>{selectedProduct.moq}</strong></span><span><small className="block text-slate-500">Base price</small><strong>{currency(selectedProduct.price)}</strong></span><span><small className="block text-slate-500">Available stock</small><strong>{selectedProduct.stock.toLocaleString()}</strong></span></div>}
+          {selectedProduct && <div className="mt-4 grid gap-3 rounded-lg border border-brand-100 bg-brand-50/60 p-4 sm:grid-cols-4"><span><small className="block text-slate-500">Selected product</small><strong className="text-xs">{selectedProduct.name}</strong></span><span><small className="block text-slate-500">MOQ guidance</small><strong>{selectedProduct.moq} {selectedProduct.unit}s minimum</strong></span><span><small className="block text-slate-500">Base price</small><strong>{currency(selectedProduct.price)} / {selectedProduct.unit}</strong></span><span><small className="block text-slate-500">Available stock</small><strong>{selectedProduct.stock.toLocaleString()}</strong></span></div>}
+          <p className="mt-4 rounded-md bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">Tip: include your target price and delivery requirements so the sales team can return a more useful commercial proposal.</p>
         </Card>
         <Card title="Fulfillment Details">
           <div className="grid gap-5 md:grid-cols-2">
@@ -152,7 +154,7 @@ export function QuotationFormPage() {
     pricing.quantity * pricing.unitPrice * (1 - pricing.discount / 100);
   const update = (key) => (e) =>
     setPricing({ ...pricing, [key]: Math.max(0, Number(e.target.value)) });
-  const saveDraft = (form) => { const values=Object.fromEntries(new FormData(form)); saveRecord("quotations", { id:Date.now(), number:`QT-2026-${840 + Math.floor(Date.now()%100)}`, buyer:values.buyer, rfq:values.rfq?.split(" - ")[0], amount:subtotal*1.08+pricing.shipping, discount:pricing.discount, expiry:values.validity, status:"Draft" }); setNotice("Quotation draft saved."); };
+  const saveDraft = (form) => { const values=Object.fromEntries(new FormData(form)); if (!values.buyer || !values.rfq) { setNotice("Select a buyer and RFQ before saving a draft."); return; } saveRecord("quotations", { id:Date.now(), number:`QT-2026-${840 + Math.floor(Date.now()%100)}`, buyer:values.buyer, rfq:values.rfq?.split(" - ")[0], amount:subtotal*1.08+pricing.shipping, discount:pricing.discount, expiry:values.validity, status:"Draft" }); setNotice("Quotation draft saved."); };
   return (
     <>
       <PageHeader

@@ -46,6 +46,11 @@ export default function ShipmentPlanningPage() {
       <PageHeader title="Shipment Planning" description="Create shipment plans against purchase-order balances. Any plan qty automatically reduces the unshipped remainder." actions={<button className="btn-primary" onClick={() => setNewPlan(true)}><Route size={15} />New shipment plan</button>} />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-sky-100 bg-sky-50/60 p-4 text-sm text-sky-900">
+        <p className="font-semibold">Planning workflow</p>
+        <p className="mt-1 text-sky-800">Choose a PO with remaining units, plan only what is available, then assign the carrier, service, ETA, and delivery site. Planned quantity is deducted from the open PO balance immediately.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Active plans" value={num(plans.length)} icon={Route} tone="blue" trend={`${num(soon.length)} open`} />
         <StatCard label="Units in plan queue" value={num(totalPlanned)} icon={Send} tone="amber" trend="awaiting dispatch" />

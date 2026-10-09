@@ -241,7 +241,7 @@ export function HomePage() {
               enterprise purchasing.
             </p>
 
-            <div className="mt-9 flex flex-wrap gap-4">
+            <div className="mt-9 flex flex-wrap gap-4" aria-label="Primary marketplace actions">
               <Link
                 to="/register"
                 className="group inline-flex items-center gap-4 rounded-xl bg-[#0877F9] px-7 py-4 text-sm font-extrabold text-white shadow-xl shadow-blue-950/30 transition hover:bg-blue-500"

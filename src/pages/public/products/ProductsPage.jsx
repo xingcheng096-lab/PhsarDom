@@ -1,6 +1,6 @@
 ﻿
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Search,
   SlidersHorizontal,
@@ -71,7 +71,11 @@ function ProductCard({ product, listView = false }) {
     product.stockStatus ||
     product.stock_status ||
     product.availability ||
+    product.status ||
     "In Stock";
+  const bestPrice = Array.isArray(product.tiers) && product.tiers.length
+    ? Math.min(...product.tiers.map((tier) => Number(tier.price)).filter(Number.isFinite))
+    : null;
 
   return (
     <Link
@@ -137,11 +141,11 @@ function ProductCard({ product, listView = false }) {
 
         <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
           <Truck size={16} className="text-blue-600" />
-          {product.shippingTime || "Business shipping available"}
+          {product.shippingTime || product.leadTime || "Business shipping available"}
         </div>
 
         <div className="mt-4 flex items-center justify-between rounded-lg bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
-          <span>Explore wholesale pricing</span>
+          <span>{bestPrice !== null ? `Volume pricing from $${bestPrice.toFixed(2)}` : "Explore wholesale pricing"}</span>
           <ArrowRight size={17} />
         </div>
       </div>
@@ -150,12 +154,18 @@ function ProductCard({ product, listView = false }) {
 }
 
 export function ProductsPage() {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(() => params.get("search") || "");
+  const [category, setCategory] = useState(() => params.get("category") || "all");
   const [sort, setSort] = useState("name");
   const [view, setView] = useState("grid");
   const [availability, setAvailability] = useState("all");
   const [moqFilter, setMoqFilter] = useState("all");
+
+  useEffect(() => {
+    setSearch(params.get("search") || "");
+    setCategory(params.get("category") || "all");
+  }, [params]);
 
   const products = Array.isArray(sourceProducts)
     ? sourceProducts

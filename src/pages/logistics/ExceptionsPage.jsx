@@ -60,6 +60,11 @@ export default function ExceptionsPage() {
       <PageHeader title="Shipment Exceptions" description="Delays, shortages, damaged units, and POD gaps. Assign ownership, append notes, and close tickets." />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-red-100 bg-red-50/60 p-4 text-sm text-red-900">
+        <p className="font-semibold">Exception response</p>
+        <p className="mt-1 text-red-800">Assign an owner first, add evidence or a carrier update, and resolve only after the delivery risk is closed. High-severity exceptions should be escalated before closure.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open exceptions" value={num(open.length)} icon={AlertTriangle} tone="amber" trend={`${num(assigned.length)} owned`} />
         <StatCard label="Resolved" value={num(resolved.length)} icon={CheckCircle2} tone="green" trend="SLA tracked" />

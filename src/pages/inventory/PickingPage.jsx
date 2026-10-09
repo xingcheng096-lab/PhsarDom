@@ -72,6 +72,11 @@ export default function PickingPage() {
       <PageHeader title="Picking" description="Release pick waves, record picks by unit, flag shortages, and complete. Completing a pick decrements reserved stock and posts the ledger movement." />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-blue-900">
+        <p className="font-semibold">Pick wave guidance</p>
+        <p className="mt-1 text-blue-800">Start a wave, record units as they leave the bin, then complete it only after the required quantity is confirmed. Use Shortage when the bin cannot fulfill the reservation so the exception is visible to the next team.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Waiting / assigned" value={num(waiting.length + assigned.length)} icon={ClipboardList} tone="amber" trend={`${num(sumBy(pickable.filter((r) => r.status !== 'Picking'), (r) => r.qty))} units queued`} />
         <StatCard label="In progress" value={num(inProgress.length)} icon={Timer} tone="blue" trend={`${num(sumBy(inProgress, (r) => r.picked || 0))}/${num(sumBy(inProgress, (r) => r.qty))}`} />

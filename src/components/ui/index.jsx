@@ -204,18 +204,20 @@ export function IconButton({ label, children, className = "", type = "button", .
   );
 }
 export function Alert({ type = "info", children, onClose }) {
-  const ok = type === "success";
+  const styles = {
+    success: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    error: "border-red-200 bg-red-50 text-red-800",
+    info: "border-blue-200 bg-blue-50 text-blue-800",
+  };
+  const Icon = type === "success" ? CheckCircle2 : AlertCircle;
   return (
     <div
-      role={ok ? "status" : "alert"}
+      role={type === "success" || type === "info" ? "status" : "alert"}
       aria-live="polite"
-      className={`flex items-center gap-3 rounded-md border p-3 text-sm ${ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-blue-200 bg-blue-50 text-blue-800"}`}
+      className={`flex items-center gap-3 rounded-lg border p-3 text-sm ${styles[type] || styles.info}`}
     >
-      {ok ? (
-        <CheckCircle2 aria-hidden size={18} />
-      ) : (
-        <AlertCircle aria-hidden size={18} />
-      )}
+      <Icon aria-hidden size={18} />
       <span className="flex-1">{children}</span>
       {onClose && (
         <IconButton

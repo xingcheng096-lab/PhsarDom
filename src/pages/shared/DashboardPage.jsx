@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   BriefcaseBusiness,
   CircleDollarSign,
   ClipboardCheck,
@@ -129,11 +130,7 @@ export default function DashboardPage({ role }) {
       <PageHeader
         title={cfg.title}
         description={cfg.description}
-        actions={
-          <button className="btn-secondary" onClick={() => window.print()}>
-            Export snapshot
-          </button>
-        }
+        actions={<>{role === "buyer" && <><button className="btn-secondary" onClick={() => navigate("/buyer/products")}><Package size={14} /> Browse catalog</button><button className="btn-primary" onClick={() => navigate("/buyer/rfqs/new")}><ClipboardList size={14} /> New RFQ</button></>}{role === "admin" && <><button className="btn-secondary" onClick={() => navigate("/admin/buyers/pending")}><UserCheck size={14} /> Review buyers</button><button className="btn-primary" onClick={() => navigate("/admin/products/new")}><Package size={14} /> Add product</button></>}{role !== "buyer" && role !== "admin" && <button className="btn-secondary" onClick={() => window.print()}>Export snapshot</button>}</>}
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cfg.cards.map(([label, value, Icon, tone, trend, context]) => (
@@ -148,6 +145,13 @@ export default function DashboardPage({ role }) {
           />
         ))}
       </div>
+      {role === "admin" && (
+        <Card title="Admin priorities" className="mt-5" bodyClassName="grid gap-3 p-4 sm:grid-cols-3">
+          <button type="button" onClick={() => navigate("/admin/buyers/pending")} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><UserCheck size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Verify buyers</strong><small className="mt-1 block text-slate-500">Clear the pending KYC queue safely.</small></span></button>
+          <button type="button" onClick={() => navigate("/admin/inventory")} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><Package size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Check inventory</strong><small className="mt-1 block text-slate-500">Review low stock and backorders.</small></span></button>
+          <button type="button" onClick={() => navigate("/admin/reports/executive")} className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><TrendingUp size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Review performance</strong><small className="mt-1 block text-slate-500">Open executive reporting for trends.</small></span></button>
+        </Card>
+      )}
       {role === "admin" && (
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <InfoBox
@@ -227,6 +231,11 @@ export default function DashboardPage({ role }) {
       </div>
       {role === "buyer" && (
         <div className="mt-5 grid gap-5 lg:grid-cols-3">
+          <Card title="Recommended next steps" className="lg:col-span-3" bodyClassName="grid gap-3 p-4 sm:grid-cols-3">
+            <button type="button" onClick={() => navigate("/buyer/products")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><Package size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Find products</strong><small className="mt-1 block text-slate-500">Compare MOQ and volume pricing.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
+            <button type="button" onClick={() => navigate("/buyer/rfqs/new")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><ClipboardList size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Request a quote</strong><small className="mt-1 block text-slate-500">Ask for negotiated commercial terms.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
+            <button type="button" onClick={() => navigate("/buyer/purchase-orders")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><ShoppingCart size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Track an order</strong><small className="mt-1 block text-slate-500">Review fulfillment and delivery status.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
+          </Card>
           <Card title="Credit Usage">
             <div className="flex justify-between">
               <strong className="text-2xl">{currency(162500)}</strong>
@@ -247,6 +256,7 @@ export default function DashboardPage({ role }) {
               .filter((x) => x.buyer === "Atlas Hospitality Group")
               .map((s) => (
                 <button
+                  type="button"
                   onClick={() => navigate(`/buyer/shipments/${s.id}`)}
                   className="flex w-full items-center justify-between border-b py-2.5 text-left last:border-0"
                   key={s.id}

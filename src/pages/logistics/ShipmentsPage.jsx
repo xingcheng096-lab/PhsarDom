@@ -42,6 +42,10 @@ export default function ShipmentsPage() {
   return (
     <>
       <PageHeader title="Shipments" description="Combined view of static shipments and live ERP shipment plans. Open a row to track and advance it." />
+      <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <p className="font-semibold text-slate-900">Shipment control tower</p>
+        <p className="mt-1 text-slate-600">Use the register to compare queued and moving freight. Open a shipment to review carrier details and advance its supported milestone; delivery proof is captured from Deliveries.</p>
+      </div>
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Shipments + plans" value={num(staticRows.length + plans.length)} icon={Truck} tone="blue" trend={`${plans.length} live ERP plans`} />
         <StatCard label="On the move" value={num([...plans, ...staticRows].filter((r) => ['Dispatched', 'In Transit', 'Planned', 'Packed'].includes(r.status)).length)} icon={Anchor} tone="amber" trend="in flight / queued" />

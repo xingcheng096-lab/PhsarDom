@@ -43,6 +43,11 @@ export default function PackingPage() {
       <PageHeader title="Packing" description="Build pallets, verify counts, and tender shipments. Completing a pack moves the line to Ready to Ship." />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-violet-100 bg-violet-50/60 p-4 text-sm text-violet-900">
+        <p className="font-semibold">Pack-line guidance</p>
+        <p className="mt-1 text-violet-800">Open a waiting line, verify the unit and package count, then complete the pack to hand it off to logistics as Ready to Ship.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Waiting" value={num(waiting.length)} icon={Box} tone="amber" trend={`${num(sumBy(waiting, (r) => r.qty))} units`} />
         <StatCard label="On the pack line" value={num(packingRow.length)} icon={PackageCheck} tone="blue" trend="packout in progress" />

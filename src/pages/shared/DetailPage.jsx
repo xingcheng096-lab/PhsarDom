@@ -17,6 +17,7 @@ import DocumentList from '../../components/b2b/kyc/DocumentList'
 import DocumentPreview from '../../components/b2b/kyc/DocumentPreview'
 import VerificationChecklist from '../../components/b2b/kyc/VerificationChecklist'
 import VerificationDecisionPanel from '../../components/b2b/kyc/VerificationDecisionPanel'
+import { getStoredRecords, saveRecord } from '../../services/mockStore'
 
 const sources = { buyers, products, rfqs, quotations, purchaseOrders, contracts, invoices, shipments, warehouses, inventory }
 const pathMap = { rfqs: 'rfqs', quotations: 'quotations', purchaseOrders: 'purchase-orders', contracts: 'contracts', invoices: 'invoices', shipments: 'shipments', buyers: 'buyers', inventory: 'inventory' }
@@ -223,7 +224,7 @@ export default function DetailPage({ type, title }) {
   const { id } = useParams()
   const location = useLocation()
   const root = rootFor(location)
-  const found = (sources[type] || []).find((item) => item.id === Number(id))
+  const found = getStoredRecords(type, sources[type] || []).find((item) => item.id === Number(id))
   const availableTabs = tabMap[type] || ['Overview', 'Documents', 'Activity']
   const [tab, setTab] = useState(availableTabs[0])
   const [row, setRow] = useState(found)
@@ -242,7 +243,18 @@ export default function DetailPage({ type, title }) {
   const heading = row.number || row.name || row.business
   const copy = async () => { await navigator.clipboard?.writeText(heading); setNotice(`${heading} copied to clipboard.`) }
   const now = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-  const bump = (patch) => setRow((current) => ({ ...current, ...patch }))
+  const bump = (patch) => setRow((current) => {
+    const next = { ...current, ...patch }
+    saveRecord(type, next)
+    return next
+  })
+  const acceptQuote = () => {
+    const poId = Date.now()
+    const poNumber = `PO-DEMO-${poId}`
+    saveRecord('purchaseOrders', { id: poId, number: poNumber, buyer: row.buyer, supplier: 'PhsarDom Supplier Network', quote: row.number, amount: row.amount, terms: row.terms, delivery: row.delivery?.match(/\d{4}-\d{2}-\d{2}/)?.[0] || row.expiry, status: 'Pending', created: new Date().toISOString().slice(0, 10), ordered: row.quantity, shipped: 0, remaining: row.quantity, deliveryAddress: row.delivery || 'To be confirmed', paymentSchedule: [{ label: 'Due on confirmation', percent: 100, amount: row.amount, due: row.expiry, status: 'Upcoming' }], milestones: [{ label: 'Order Created', date: new Date().toISOString().slice(0, 10), status: 'Completed' }, { label: 'Supplier Confirmation', date: row.expiry, status: 'Pending' }] })
+    bump({ status: 'Accepted', negotiations: [...(row.negotiations || []), { user: row.buyer.split(' ')[0] === 'Atlas' ? 'Maya Chen' : row.buyer, role: 'Buyer', price: row.unitPrice, quantity: row.quantity, terms: row.terms, comment: 'Quote accepted.', time: now, status: 'Accepted' }] })
+    setNotice(`Quote accepted. Purchase order ${poNumber} created.`)
+  }
   const openModal = (kind) => { setForm({ reason: '', targetDoc: '', price: row.unitPrice || '', quantity: row.quantity || '', terms: row.terms || 'Net-30', comment: '', note: '' }); setModal(kind) }
 
   const verification = type === 'buyers' ? verificationSteps.map(([label, sub], index) => ({ label, sub, done: ['Approved'].includes(row.status) ? index < 4 : index < ({ Pending: 1, 'Under Review': 2, 'Need More Information': 2, Rejected: 3, Suspended: 2, Approved: 4 }[row.status] || 1), current: index === ({ Pending: 1, 'Under Review': 2, 'Need More Information': 2, Rejected: 3, Suspended: 2, Approved: 4 }[row.status] || 1) })) : []
@@ -337,7 +349,7 @@ export default function DetailPage({ type, title }) {
 
     if (type === 'quotations') {
       if (tab === 'Pricing') return <PricingSection quote={row} />
-      if (tab === 'Overview') return <div className="space-y-5"><RfqQuoteWorkspace quote={row} onNotice={setNotice} /><ApprovalBanner quote={row} /></div>
+      if (tab === 'Overview') return <div className="space-y-5"><RfqQuoteWorkspace quote={row} onNotice={setNotice} onAccept={acceptQuote} /><ApprovalBanner quote={row} /></div>
       return null
     }
 
@@ -428,7 +440,7 @@ export default function DetailPage({ type, title }) {
   const confirmActions = (() => {
     if (confirm === 'approve') return { title: 'Approve buyer', message: `Verify ${row.business} and grant full wholesale purchasing access?`, confirmText: 'Approve', onConfirm: () => { bump({ status: 'Approved', verifiedAt: now.split(',')[0] }); setNotice(`${row.business} approved and verified.`) } }
     if (confirm === 'suspend') return { title: 'Suspend buyer', message: `Suspend ${row.business}? Purchasing will be blocked until reinstated.`, confirmText: 'Suspend', danger: true, onConfirm: () => { bump({ status: 'Suspended' }); setNotice(`${row.business} suspended.`) } }
-    if (confirm === 'acceptQuote') return { title: 'Accept quote', message: `Accept ${heading} at ${currency(row.unitPrice)}/unit? A purchase order will be generated from this quote.`, confirmText: 'Accept Quote', onConfirm: () => { bump({ status: 'Accepted', negotiations: [...(row.negotiations || []), { user: row.buyer.split(' ')[0] === 'Atlas' ? 'Maya Chen' : row.buyer, role: 'Buyer', price: row.unitPrice, quantity: row.quantity, terms: row.terms, comment: 'Quote accepted.', time: now, status: 'Accepted' }] }); setNotice('Quote accepted. Purchase order workflow started.') } }
+    if (confirm === 'acceptQuote') return { title: 'Accept quote', message: `Accept ${heading} at ${currency(row.unitPrice)}/unit? A purchase order will be generated from this quote.`, confirmText: 'Accept Quote', onConfirm: acceptQuote }
     if (confirm === 'rejectQuote') return { title: 'Reject quote', message: `Reject ${heading}? The negotiation thread stays visible on the record.`, confirmText: 'Reject Quote', danger: true, onConfirm: () => { bump({ status: 'Rejected', negotiations: [...(row.negotiations || []), { user: row.buyer.split(' ')[0] === 'Atlas' ? 'Maya Chen' : row.buyer, role: 'Buyer', price: null, quantity: row.quantity, terms: row.terms, comment: 'Quote rejected by buyer.', time: now, status: 'Rejected' }] }); setNotice('Quote rejected.') } }
     if (confirm === 'approveQuote') return { title: 'Approve quote pricing', message: `Approve ${heading}? The discount is within the ${row.approval?.threshold}% threshold review and will be released to the buyer.`, confirmText: 'Approve', onConfirm: () => { bump({ status: 'Sent', approval: { ...row.approval, status: 'Approved' } }); setNotice('Pricing approved. Sent to buyer.') } }
     if (confirm === 'sendQuote') return { title: 'Send quote to buyer', message: `Send ${heading} to ${row.buyer}? The negotiation thread becomes visible to the buyer.`, confirmText: 'Send Quote', onConfirm: () => { bump({ status: 'Sent' }); setNotice('Quote sent to buyer.') } }
@@ -437,11 +449,26 @@ export default function DetailPage({ type, title }) {
     return null
   })()
 
+  const roleNextStep = isBuyer ? ({
+    rfqs: row.status === 'Quoted' || row.status === 'Negotiating' ? 'Review the related quotation and respond with an acceptance or counter-offer.' : 'Your request is being reviewed. Add a revision if product, quantity or delivery needs change.',
+    quotations: ['Sent', 'Negotiating'].includes(row.status) ? 'Compare the offered price, validity and terms before accepting, rejecting or countering.' : row.status === 'Accepted' ? 'This quotation is accepted. Continue to the related purchase order for fulfillment updates.' : '',
+    purchaseOrders: row.remaining > 0 ? 'Monitor milestones and payment terms here while the supplier completes fulfillment.' : 'This order is fully shipped. Open Shipments to follow delivery confirmation.',
+    contracts: row.status === 'Expiring' ? `Renewal is due ${row.renews || 'soon'}. Review the terms before placing another commitment.` : 'Review agreed MOQ, payment terms and renewal dates before repeat purchasing.',
+    invoices: Math.max(0, (row.amount || 0) - (row.paid || 0)) > 0 ? `Balance due: ${currency(Math.max(0, (row.amount || 0) - (row.paid || 0)))}. Check the due date and payment instructions below.` : 'This invoice is fully paid. Keep the record for your finance trail.',
+    shipments: row.status === 'Delayed' ? 'This shipment needs attention. Review the exception details and contact support if the expected date has passed.' : 'Use Tracking to follow carrier events and the expected delivery date.',
+  }[type]) : root === 'sales' ? ({
+    buyers: 'Review account history, open RFQs and active quotations before your next buyer follow-up.',
+    rfqs: row.status === 'New' || row.status === 'Under Review' ? 'Review the requested quantity, target price and delivery requirements, then create or update a quotation.' : 'Keep the buyer updated and move the request forward when commercial terms are ready.',
+    quotations: row.status === 'Draft' ? 'Validate pricing, payment terms and expiry before sending this quote to the buyer.' : row.status === 'Negotiating' ? 'Review the latest counter-offer and respond with a clear commercial revision.' : 'Monitor the buyer response and convert accepted terms into an order.',
+    purchaseOrders: row.remaining > 0 ? 'Coordinate the remaining quantity with warehouse and logistics teams.' : 'Confirm delivery completion and keep the buyer record updated.',
+    contracts: row.status === 'Expiring' ? `Prepare a renewal conversation before ${row.renews || 'the renewal date'}.` : 'Review commitments and renewal signals before the next account review.',
+  }[type]) : '';
   return <div className="min-w-0">
     <PageHeader title={heading} description={`${title} · ${row.status}`} actions={headerActions.filter(Boolean)} />
+    {roleNextStep && <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-900"><strong className="block text-xs uppercase tracking-wide text-blue-700">{isBuyer ? 'Next step' : 'Sales action'}</strong><span className="mt-1 block text-xs leading-5">{roleNextStep}</span></div>}
     {notice && <div className="mb-4"><Alert type="success" onClose={() => setNotice('')}>{notice}</Alert></div>}
     <div className="mb-5 flex gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-white p-1">
-      {availableTabs.map((name) => <button key={name} onClick={() => setTab(name)} className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${tab === name ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{name === 'POs' ? 'P.O.s' : name}</button>)}
+      {availableTabs.map((name) => <button type="button" key={name} onClick={() => setTab(name)} className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition ${tab === name ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{name === 'POs' ? 'P.O.s' : name}</button>)}
     </div>
     <div className="min-w-0">{panel()}</div>
     <ConfirmDialog open={!!confirm} title={confirmActions?.title || ''} message={confirmActions?.message || ''} confirmText={confirmActions?.confirmText} danger={confirmActions?.danger} onClose={() => setConfirm(null)} onConfirm={() => confirmActions?.onConfirm()} />

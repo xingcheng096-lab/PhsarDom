@@ -37,6 +37,10 @@ export default function LocationsPage() {
     <>
       <PageHeader title="Locations & Stock Positions" description="Warehouse layout with live on-hand, reserved, and allocated positions per bin." actions={<span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600"><MapPin size={13} />{warehouses.length} warehouses</span>} />
 
+      <div className="mb-5 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 text-sm text-emerald-900">
+        <p className="font-semibold">Read the position view</p>
+        <p className="mt-1 text-emerald-800">Available is ready to reserve, reserved is committed to an order, and allocated is assigned to fulfillment. Select a bin to inspect its SKU positions before moving or counting stock.</p>
+      </div>
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Warehouse on hand" value={num(stock.reduce((s, r) => s + r.onHand, 0))} icon={Boxes} tone="blue" trend={`${stock.length} SKUs`} />
         <StatCard label="Reserved units" value={num(stock.reduce((s, r) => s + r.reserved, 0))} icon={Package} tone="amber" trend="awaiting picks" />

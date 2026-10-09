@@ -59,6 +59,11 @@ export default function CreditRequestsPage() {
       />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-violet-100 bg-violet-50/60 p-4 text-sm text-violet-900">
+        <p className="font-semibold">Credit review guidance</p>
+        <p className="mt-1 text-violet-800">Compare the requested limit with current exposure, terms, and risk before approving. Decisions update the buyer credit profile and downstream purchasing capacity.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Pending decisions" value={pending.length} icon={TriangleAlert} tone="amber" trend={`${pending.filter((r) => r.priority === 'High').length} high priority`} />
         <StatCard label="Pending limit increase" value={money(requested)} icon={TrendingUp} tone="blue" trend={`${pending.length} accounts`} />

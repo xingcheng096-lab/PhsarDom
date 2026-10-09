@@ -1,1 +1,37 @@
-export { ProductDetailPage as default, ProductDetailPage } from "../publicShared.jsx";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, FileText, Minus, Plus, ShieldCheck, Truck } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { Card, StatusBadge } from "../../../components/ui";
+import { products } from "../../../data";
+import { currency, number } from "../../../utils/format";
+
+function downloadDocument(product, label) {
+  const url = URL.createObjectURL(new Blob([`PhsarDom Wholesale\n${product.name}\n${label}`], { type: "text/plain" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${product.name}-${label}`.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + ".txt";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function ProductDetailPage() {
+  const { id } = useParams();
+  const product = products.find((item) => item.id === Number(id));
+  const [quantity, setQuantity] = useState(product?.moq || 1);
+  useEffect(() => setQuantity(product?.moq || 1), [product?.moq, id]);
+  const tier = useMemo(() => product ? [...product.tiers].reverse().find((item) => quantity >= item.min) || product.tiers[0] : null, [product, quantity]);
+  if (!product) return <main className="mx-auto max-w-3xl px-5 py-20 text-center"><h1 className="text-2xl font-bold text-slate-950">Product not found</h1><p className="mt-2 text-slate-500">The requested wholesale item is unavailable.</p><Link to="/products" className="btn-primary mt-6">Return to catalog</Link></main>;
+  const nextTier = product.tiers.find((item) => item.min > quantity);
+  const subtotal = quantity * tier.price;
+  const setSafeQuantity = (value) => setQuantity(Math.max(product.moq, Number(value) || product.moq));
+  return <main className="min-h-screen bg-[#f5f7fb]"><div className="mx-auto max-w-7xl px-5 py-8 sm:px-6 lg:py-10">
+    <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs text-slate-500"><Link to="/products" className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:text-blue-800"><ArrowLeft size={14} /> Products</Link><span aria-hidden>/</span><span>{product.category}</span><span aria-hidden>/</span><span className="font-medium text-slate-700">{product.name}</span></nav>
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(380px,.9fr)]"><div className="space-y-5"><div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><img src={product.image} alt={product.name} className="aspect-[4/3] w-full rounded-xl object-cover" /></div><Card title="Why buy through PhsarDom" bodyClassName="grid gap-4 p-5 sm:grid-cols-3"><div><ShieldCheck className="text-blue-700" size={20} /><strong className="mt-2 block text-sm">Verified supply</strong><p className="mt-1 text-xs leading-5 text-slate-500">Business-ready suppliers and traceable records.</p></div><div><Truck className="text-blue-700" size={20} /><strong className="mt-2 block text-sm">Coordinated delivery</strong><p className="mt-1 text-xs leading-5 text-slate-500">Track commercial fulfillment through delivery.</p></div><div><FileText className="text-blue-700" size={20} /><strong className="mt-2 block text-sm">Structured RFQ</strong><p className="mt-1 text-xs leading-5 text-slate-500">Request terms when your order needs negotiation.</p></div></Card></div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><p className="text-xs font-bold uppercase tracking-[.18em] text-blue-700">{product.supplier}</p><h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">{product.name}</h1><p className="mt-2 text-sm text-slate-500">{product.category} · SKU {product.sku}</p><div className="mt-5 grid grid-cols-2 gap-3 border-y border-slate-100 py-4 sm:grid-cols-4"><div><span className="text-xs text-slate-500">Minimum order</span><strong className="mt-1 block">{number(product.moq)} {product.unit}s</strong></div><div><span className="text-xs text-slate-500">Availability</span><span className="mt-1 block"><StatusBadge status={product.status} /></span></div><div><span className="text-xs text-slate-500">Available stock</span><strong className="mt-1 block">{number(product.stock)}</strong></div><div><span className="text-xs text-slate-500">Lead time</span><strong className="mt-1 block">{product.leadTime}</strong></div></div><p className="mt-5 text-sm leading-7 text-slate-600">{product.description}</p>
+        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200"><div className="grid grid-cols-2 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500"><span>Quantity tier</span><span className="text-right">Unit price</span></div>{product.tiers.map((item) => { const active = quantity >= item.min && (!item.max || quantity <= item.max); return <div key={item.min} className={`grid grid-cols-2 border-t px-4 py-3 text-sm ${active ? "bg-blue-50 font-semibold text-blue-900" : ""}`}><span>{item.min}{item.max ? `–${item.max}` : "+"}{active && <span className="ml-2 text-[10px] uppercase text-blue-700">Current tier</span>}</span><span className="text-right">{currency(item.price)}</span></div>; })}</div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2"><label><span className="form-label">Order quantity</span><div className="flex rounded-lg border border-slate-300"><button type="button" aria-label="Decrease quantity" className="icon-btn rounded-none" onClick={() => setSafeQuantity(quantity - 1)}><Minus size={16} /></button><input aria-label="Order quantity" type="number" min={product.moq} value={quantity} onChange={(event) => setSafeQuantity(event.target.value)} className="form-control rounded-none border-y-0 text-center" /><button type="button" aria-label="Increase quantity" className="icon-btn rounded-none" onClick={() => setSafeQuantity(quantity + 1)}><Plus size={16} /></button></div></label><div><span className="form-label">Estimated subtotal</span><strong className="block rounded-lg bg-slate-100 px-3 py-2 text-xl text-slate-950">{currency(subtotal)}</strong></div></div>{nextTier ? <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">Add {number(nextTier.min - quantity)} more units to unlock {currency(nextTier.price)} per unit.</p> : <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">Best wholesale price applied for this quantity.</p>}<div className="mt-5 flex flex-col gap-3 sm:flex-row"><Link to="/login" className="btn-primary flex-1 py-3">Request a Quote <ArrowRight size={16} /></Link><Link to="/login" className="btn-secondary flex-1 py-3">Sign in to purchase</Link></div></section></div>
+    <div className="mt-6 grid gap-6 lg:grid-cols-2"><Card title="Specifications"><dl className="grid gap-4 sm:grid-cols-2">{Object.entries(product.specs || {}).map(([key, value]) => <div key={key}><dt className="text-xs text-slate-500">{key}</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{value}</dd></div>)}</dl></Card><Card title="Documents"><div className="divide-y divide-slate-100"><button type="button" onClick={() => downloadDocument(product, "data-sheet")} className="flex w-full items-center gap-3 py-3 text-left text-sm font-semibold text-blue-700 hover:text-blue-900"><FileText size={17} /> Product data sheet</button><button type="button" onClick={() => downloadDocument(product, "warranty")} className="flex w-full items-center gap-3 py-3 text-left text-sm font-semibold text-blue-700 hover:text-blue-900"><FileText size={17} /> Warranty information</button></div></Card></div>
+  </div></main>;
+}
+
+export default ProductDetailPage;

@@ -29,6 +29,10 @@ export default function StockMovementsPage() {
   return (
     <>
       <PageHeader title="Stock Movements" description="Posting ledger for inventory — reservations, picks, receiving, adjustments, allocations, and releases." />
+      <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <p className="font-semibold text-slate-900">Inventory audit trail</p>
+        <p className="mt-1 text-slate-600">Use the movement type filters to isolate inbound receipts, outbound picks, reservations, or approved adjustments. Positive quantities add stock; negative quantities consume or release it.</p>
+      </div>
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Movements (all time)" value={num(rows.length)} icon={History} tone="blue" trend="this period" />
         <InfoBox label="Inbound units" value={`+${num(sumBy(inbound, (r) => r.quantity))}`} icon={ArrowDownToLine} tone="green" context="receiving & adjustments" />
@@ -37,8 +41,8 @@ export default function StockMovementsPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap gap-1.5">
-        <button onClick={() => setType('')} className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${!type ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>All</button>
-        {types.map((t) => <button key={t} onClick={() => setType(type === t ? '' : t)} className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${type === t ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{t}</button>)}
+        <button type="button" aria-pressed={!type} onClick={() => setType('')} className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${!type ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>All</button>
+        {types.map((t) => <button type="button" aria-pressed={type === t} key={t} onClick={() => setType(type === t ? '' : t)} className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${type === t ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{t}</button>)}
       </div>
 
       <DataTable rows={filtered} columns={columns} caption="Stock movement ledger" pageSize={10} />

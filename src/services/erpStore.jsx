@@ -129,6 +129,7 @@ export function ErpProvider({ children }) {
     applyStockDecision: (id, status, comment = '') => {
       setState((prev) => {
         const c = prev.stockCounts.find((s) => s.id === id)
+        if (!c || c.adjustment !== 'Pending') return prev
         const v = Number(c?.variance || 0)
         const approved = status === 'Approved'
         return {

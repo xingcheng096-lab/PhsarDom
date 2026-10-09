@@ -74,6 +74,11 @@ export default function ReservationsPage() {
       />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <p className="font-semibold text-slate-900">Reservation queue</p>
+        <p className="mt-1 text-slate-600">Approve only when available stock can be committed to the purchase order. Released units return to available stock; reallocation completes the handoff to fulfillment.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Pending approval" value={pending.length} icon={Globe} tone="amber" trend={`${num(sumBy(pending, (r) => r.qty))} units to commit`} />
         <StatCard label="Reserved" value={reserved.length} icon={PackageCheck} tone="blue" trend="awaiting pick waves" />

@@ -31,6 +31,11 @@ export default function AgingPage() {
     <>
       <PageHeader title="Invoice Aging" description="Outstanding balances bucketed by days past due. Aging reflows the moment a payment is recorded." />
 
+      <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+        <p className="font-semibold">Collections focus</p>
+        <p className="mt-1 text-amber-800">Start with 90+ day balances, then work toward current invoices. Recording payment in Invoices refreshes these buckets and reduces the buyer’s open credit exposure.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total A/R" value={money(totalAR)} icon={Wallet} tone="blue" trend={`${active.length} open invoices`} />
         <StatCard label="Overdue total" value={money(overdue)} icon={TriangleAlert} tone="amber" trend={`${overduePct}% of A/R`} context="past due" />

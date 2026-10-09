@@ -91,6 +91,11 @@ export default function FinanceInvoicesPage() {
       />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-blue-900">
+        <p className="font-semibold">Receivables workflow</p>
+        <p className="mt-1 text-blue-800">Review the open balance and due date before recording a payment. Voiding removes an invoice from aging, so use it only when the source document should no longer be collectible.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open receivables" value={money(open)} icon={Wallet} tone="blue" trend="24.6k" context="vs last month" />
         <StatCard label="Collected YTD" value={money(collected)} icon={Banknote} tone="green" trend="4.2%" context="collection rate" />

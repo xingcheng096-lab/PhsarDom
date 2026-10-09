@@ -137,8 +137,13 @@ export default function ApprovalCenterPage({ kind: propKind }) {
       />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+        <p className="font-semibold">Decision workflow</p>
+        <p className="mt-1 text-amber-800">Review the business impact and audit history before deciding. Approve commits the requested change, Revise sends it back with required next steps, Reject closes it with a reason, and Delegate transfers ownership.</p>
+      </div>
+
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {[['Pending', merged.filter((r) => r.status === 'Pending').length, 'text-amber-700'], ['Approved today', merged.filter((r) => r.status === 'Approved' && String(r.date) === '2026-09-10').length, 'text-emerald-700'], ['Rejected', merged.filter((r) => r.status === 'Rejected').length, 'text-red-700'], ['High priority', merged.filter((r) => ['High', 'Critical'].includes(r.priority) && r.status === 'Pending').length, 'text-violet-700'], ['Awaiting my action', merged.filter((r) => canAct(r)).length, 'text-brand-700']].map(([label, value, tone]) => <button key={label} onClick={() => { if (label === 'Pending' || label === 'Awaiting my action') setView('Pending'); if (label === 'High priority') setPriority('High') }} className="surface-card p-4 text-left transition hover:-translate-y-px hover:shadow-md"><span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</span><strong className={`mt-1 block text-2xl ${tone}`}>{value}</strong></button>)}
+        {[['Pending', merged.filter((r) => r.status === 'Pending').length, 'text-amber-700'], ['Approved today', merged.filter((r) => r.status === 'Approved' && String(r.date) === '2026-09-10').length, 'text-emerald-700'], ['Rejected', merged.filter((r) => r.status === 'Rejected').length, 'text-red-700'], ['High priority', merged.filter((r) => ['High', 'Critical'].includes(r.priority) && r.status === 'Pending').length, 'text-violet-700'], ['Awaiting my action', merged.filter((r) => canAct(r)).length, 'text-brand-700']].map(([label, value, tone]) => <button type="button" aria-label={`Filter approvals by ${label}`} key={label} onClick={() => { if (label === 'Pending' || label === 'Awaiting my action') setView('Pending'); if (label === 'High priority') setPriority('High') }} className="surface-card p-4 text-left transition hover:-translate-y-px hover:shadow-md"><span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</span><strong className={`mt-1 block text-2xl ${tone}`}>{value}</strong></button>)}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-1.5">
@@ -170,7 +175,7 @@ export default function ApprovalCenterPage({ kind: propKind }) {
             const record = resolveRecord(row)
             const linked = allowLink[roleKey] && record && moduleRoute[type.module]
             return (
-              <section key={row.id} className="surface-card transition duration-200 hover:-translate-y-px hover:shadow-md">
+              <section key={row.id} data-approval-id={row.id} className="surface-card transition duration-200 hover:-translate-y-px hover:shadow-md">
                 <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-start">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">

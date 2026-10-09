@@ -3,6 +3,7 @@ import { Check, Eye, EyeOff, Mail, Pencil, Save, ShieldCheck, UserRound } from "
 import PageHeader from "../../components/common/PageHeader";
 import {
   Alert,
+  Button,
   Card,
   Checkbox,
   SelectInput,
@@ -23,6 +24,7 @@ const fieldTone = {
 
 export function ProfilePage({ staff = false }) {
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   return (
     <>
       <PageHeader
@@ -44,6 +46,13 @@ export function ProfilePage({ staff = false }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              const values = Object.fromEntries(new FormData(e.currentTarget));
+              if (!values.name?.trim() || !values.email?.trim()) {
+                setError("Company name and email are required.");
+                setSaved(false);
+                return;
+              }
+              setError("");
               setSaved(true);
             }}
             className="grid gap-5 sm:grid-cols-2"
@@ -85,10 +94,11 @@ export function ProfilePage({ staff = false }) {
                 defaultValue="455 North Michigan Avenue, Chicago, IL 60611"
               />
             </div>
-            <button className="btn-primary sm:col-span-2 sm:justify-self-end">
+            {error && <div className="sm:col-span-2"><Alert type="error" onClose={() => setError("")}>{error}</Alert></div>}
+            <Button type="submit" className="sm:col-span-2 sm:justify-self-end">
               <Save size={15} />
               Save changes
-            </button>
+            </Button>
           </form>
         </Card>
         <div className="space-y-5">

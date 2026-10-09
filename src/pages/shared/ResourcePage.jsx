@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Boxes,
+  ClipboardList,
   CircleDollarSign,
   Clock3,
   Download,
@@ -18,6 +19,7 @@ import DataTable from "../../components/tables/DataTable";
 import SchemaForm from "../../components/forms/SchemaForm";
 import {
   Alert,
+  Card,
   ConfirmDialog,
   Modal,
 } from "../../components/ui";
@@ -729,6 +731,32 @@ export default function ResourcePage({
     setMessage("CSV export downloaded.");
   };
   const actionLabel = addLabel || addNames[type] || `Add ${schema?.label || title}`;
+  const workspaceGuidance = root === "buyer" ? {
+    rfqs: ["Request quotes with product, quantity, delivery and target price details.", "Start an RFQ when standard catalog pricing does not fit your order."],
+    quotations: ["Review supplier pricing and expiry dates before accepting or countering.", "Accepted quotations can move into the purchase-order workflow."],
+    purchaseOrders: ["Track fulfillment, payment terms and delivery milestones from each order.", "Open an order to review shipment progress and remaining quantities."],
+    contracts: ["Review negotiated terms, renewal dates and committed quantities.", "Keep active agreements visible before placing repeat orders."],
+    invoices: ["Monitor balances, due dates and payment status in one place.", "Open an invoice for detailed payment and credit-note information."],
+    shipments: ["Follow carrier, tracking and delivery milestones for every shipment.", "Open a shipment to review exceptions and expected delivery."],
+  }[type] : root === "admin" ? {
+    buyers: ["Review verification evidence before approving access to wholesale purchasing.", "Use the status filters to focus the queue on pending or suspended accounts."],
+    products: ["Maintain catalog quality, MOQ, stock and tier-pricing data in one workspace.", "Use the product detail view before editing a record or creating a new product."],
+    inventory: ["Monitor available, reserved and backordered stock before replenishment decisions.", "Open a stock record to review its warehouse and movement context."],
+    invoices: ["Monitor receivables, overdue balances and payment status across buyers.", "Open an invoice before taking a payment or credit-note action."],
+    shipments: ["Use shipment status and delivery dates to identify operational risk early.", "Open delayed shipments to review carrier and exception details."],
+  }[type] : root === "sales" ? {
+    buyers: ["Keep buyer follow-ups and account context close to your active pipeline.", "Open a buyer record to review RFQs, quotes, orders and notes."],
+    rfqs: ["Prioritize new and assigned RFQs, then move qualified requests into quotations.", "Review quantity, target price and delivery requirements before responding."],
+    quotations: ["Track draft, sent and negotiating quotes so every buyer receives a timely response.", "Open a quote to review expiry, pricing and counter-offer history."],
+    purchaseOrders: ["Monitor approved orders and remaining quantities through fulfillment.", "Open an order before recording shipment progress."],
+    contracts: ["Review active and expiring commercial agreements before renewal conversations.", "Open a contract to confirm MOQ, payment terms and renewal dates."],
+  }[type] : root === "support" ? {
+    buyers: ["Search buyer accounts before opening a case so verification and contact context stay together.", "Open the buyer record to review related orders, invoices, shipments and activity."],
+    purchaseOrders: ["Use order status and buyer details to identify the right fulfillment conversation.", "Open an order before escalating a delivery, invoice, or quantity issue."],
+    shipments: ["Check carrier, ETA, and exception status before responding to a tracking request.", "Open the shipment record for the latest milestone and delivery context."],
+    invoices: ["Confirm invoice status, due date, and balance before assisting with payment questions.", "Open the invoice to review payment and credit-note context."],
+    activity: ["Use the activity log to confirm when a workflow change occurred and who made it.", "Filter or search the record before escalating an unresolved customer issue."],
+  }[type] : null;
   const metricSets = {
     inventory: [
       ["Available", "16,346", Boxes, "green"],
@@ -791,6 +819,7 @@ export default function ResourcePage({
           </Alert>
         </div>
       )}
+      {workspaceGuidance && <Card className="mb-5 border-blue-100 bg-blue-50/45" bodyClassName="flex items-start gap-3 p-4"><ClipboardList size={20} className="mt-0.5 shrink-0 text-brand-600" /><div><strong className="block text-sm text-slate-900">{root === "admin" ? "Control center guidance" : root === "sales" ? "Sales workspace guidance" : root === "support" ? "Support workspace guidance" : `Your ${title.toLowerCase()} workspace`}</strong><p className="mt-1 text-xs leading-5 text-slate-600">{workspaceGuidance[0]}</p><p className="mt-1 text-xs font-medium text-brand-800">{workspaceGuidance[1]}</p></div></Card>}
       {metrics && (
         <div
           className={`mb-5 grid gap-4 sm:grid-cols-2 ${metrics.length === 5 ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}

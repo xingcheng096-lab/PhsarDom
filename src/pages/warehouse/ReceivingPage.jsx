@@ -97,6 +97,12 @@ export default function ReceivingPage() {
       <PageHeader title="Inbound Receiving" description="Carrier receipts, dock arrival, QC inspection, discrepancy handling, and put-away. Completing put-away posts units to live stock." />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm md:grid-cols-3">
+        <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">1 · Dock</p><p className="mt-1 text-slate-700">Mark expected deliveries arrived after paperwork is checked.</p></div>
+        <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">2 · Inspect</p><p className="mt-1 text-slate-700">Record received quantity or flag damage and shortages for review.</p></div>
+        <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">3 · Put away</p><p className="mt-1 text-slate-700">Confirm the target bin to post received units into live stock.</p></div>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Expected" value={num(expected.length)} icon={Truck} tone="blue" trend={`${num(sumBy(expected, (r) => r.qty))} units inbound`} />
         <StatCard label="On dock" value={num(arrived.length)} icon={Inbox} tone="amber" trend="awaiting QC" />

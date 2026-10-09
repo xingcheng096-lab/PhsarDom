@@ -134,8 +134,6 @@ export function CategoriesPage() {
 {/* GRADIENT OVERLAY */}
 <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/70 to-transparent" />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/75 to-white/5" />
-
         <div className="relative mx-auto flex min-h-[410px] max-w-[1440px] items-center px-6 py-12 lg:px-10">
           <div className="max-w-[680px]">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/85 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-700">

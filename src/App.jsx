@@ -4,7 +4,7 @@ import PublicLayout from './layouts/PublicLayout'
 import BuyerLayout from './layouts/BuyerLayout'
 import { ManagerLayout, SalesLayout } from './layouts/StaffLayout'
 import AdminLayout from './layouts/AdminLayout'
-import { FinanceLayout, InventoryLayout, LogisticsLayout, SupportLayout, WarehouseLayout, DepartmentLayoutFor } from './layouts/DepartmentLayout'
+import { DepartmentLayoutFor } from './layouts/DepartmentLayout'
 import RoleGuard from './components/common/RoleGuard'
 import { SessionProvider, useSession } from './services/session'
 import { ErpProvider } from './services/erpStore'
@@ -15,38 +15,38 @@ import DetailPage from './pages/shared/DetailPage'
 import CreditNoteDetailPage from './pages/shared/CreditNoteDetailPage'
 import { ProductFormPage, QuotationFormPage, RfqFormPage } from './pages/shared/FormPages'
 import { PermissionsPage, ProfilePage, SettingsPage } from './pages/shared/AccountPages'
-import ApprovalsPage from './pages/manager/ApprovalsPage'
-import ApprovalCenterPage from './pages/approvals/ApprovalCenterPage'
 import DepartmentHome from './pages/shared/DepartmentHome'
 import NotFoundPage from './pages/NotFoundPage'
 import LoadingState from './components/ui/LoadingState'
-import FinanceInvoicesPage from './pages/finance/FinanceInvoicesPage'
-import CreditRequestsPage from './pages/finance/CreditRequestsPage'
-import CreditRequestDetailPage from './pages/finance/CreditRequestDetailPage'
-import FinanceBuyerDetailPage from './pages/finance/FinanceBuyerDetailPage'
-import CreditNotesPage from './pages/finance/CreditNotesPage'
-import AgingPage from './pages/finance/AgingPage'
-import LocationsPage from './pages/warehouse/LocationsPage'
-import ReceivingPage from './pages/warehouse/ReceivingPage'
-import ReservationsPage from './pages/warehouse/ReservationsPage'
-import BackordersPage from './pages/warehouse/BackordersPage'
-import StockMovementsPage from './pages/warehouse/StockMovementsPage'
-import PickingPage from './pages/inventory/PickingPage'
-import PackingPage from './pages/inventory/PackingPage'
-import StockCountPage from './pages/inventory/StockCountPage'
-import ShipmentPlanningPage from './pages/logistics/ShipmentPlanningPage'
-import ShipmentsPage from './pages/logistics/ShipmentsPage'
-import ShipmentDetailPage from './pages/logistics/ShipmentDetailPage'
-import CarriersPage from './pages/logistics/CarriersPage'
-import DeliveriesPage from './pages/logistics/DeliveriesPage'
-import ExceptionsPage from './pages/logistics/ExceptionsPage'
-import HelpCenterPage from './pages/support/HelpCenterPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import { adminNav, financeNav, managerNav, warehouseNav } from './routes/navigation'
 import { ROLE_MAP } from './services/session'
 
 const DashboardPage = lazy(() => import('./pages/shared/DashboardPage'))
 const ReportPage = lazy(() => import('./pages/shared/ReportPage'))
+const ApprovalsPage = lazy(() => import('./pages/manager/ApprovalsPage'))
+const ApprovalCenterPage = lazy(() => import('./pages/approvals/ApprovalCenterPage'))
+const FinanceInvoicesPage = lazy(() => import('./pages/finance/FinanceInvoicesPage'))
+const CreditRequestsPage = lazy(() => import('./pages/finance/CreditRequestsPage'))
+const CreditRequestDetailPage = lazy(() => import('./pages/finance/CreditRequestDetailPage'))
+const FinanceBuyerDetailPage = lazy(() => import('./pages/finance/FinanceBuyerDetailPage'))
+const CreditNotesPage = lazy(() => import('./pages/finance/CreditNotesPage'))
+const AgingPage = lazy(() => import('./pages/finance/AgingPage'))
+const LocationsPage = lazy(() => import('./pages/warehouse/LocationsPage'))
+const ReceivingPage = lazy(() => import('./pages/warehouse/ReceivingPage'))
+const ReservationsPage = lazy(() => import('./pages/warehouse/ReservationsPage'))
+const BackordersPage = lazy(() => import('./pages/warehouse/BackordersPage'))
+const StockMovementsPage = lazy(() => import('./pages/warehouse/StockMovementsPage'))
+const PickingPage = lazy(() => import('./pages/inventory/PickingPage'))
+const PackingPage = lazy(() => import('./pages/inventory/PackingPage'))
+const StockCountPage = lazy(() => import('./pages/inventory/StockCountPage'))
+const ShipmentPlanningPage = lazy(() => import('./pages/logistics/ShipmentPlanningPage'))
+const ShipmentsPage = lazy(() => import('./pages/logistics/ShipmentsPage'))
+const ShipmentDetailPage = lazy(() => import('./pages/logistics/ShipmentDetailPage'))
+const CarriersPage = lazy(() => import('./pages/logistics/CarriersPage'))
+const DeliveriesPage = lazy(() => import('./pages/logistics/DeliveriesPage'))
+const ExceptionsPage = lazy(() => import('./pages/logistics/ExceptionsPage'))
+const HelpCenterPage = lazy(() => import('./pages/support/HelpCenterPage'))
 
 const resource = (type, title, basePath, props={}) => <ResourcePage type={type} title={title} basePath={basePath} {...props}/>
 

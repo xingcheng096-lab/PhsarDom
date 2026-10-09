@@ -55,6 +55,11 @@ export default function StockCountPage() {
       />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
+      <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+        <p className="font-semibold">Cycle-count workflow</p>
+        <p className="mt-1 text-amber-800">Select the SKU and bin you counted, enter the physical quantity, then submit any variance for warehouse approval. Matching counts do not create an adjustment.</p>
+      </div>
+
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open variances" value={num(openVar.length)} icon={Scale3D} tone="amber" trend="awaiting submission" />
         <StatCard label="Pending approval" value={num(pendingApprove.length)} icon={Send} tone="violet" trend="in Approval Center" />
