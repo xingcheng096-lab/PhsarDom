@@ -4,7 +4,7 @@ import { FileCheck2, Receipt, Stamp, Wallet } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
 import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import DataTable from '../../components/tables/DataTable'
-import { Alert, ConfirmDialog, Modal, SelectInput, StatusBadge, Textarea, TextInput } from '../../components/ui'
+import { Alert, ConfirmDialog, Modal, SelectInput, Textarea, TextInput } from '../../components/ui'
 import { invoices as staticInvoices } from '../../data'
 import { money, invoiceView, outstanding } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
@@ -28,7 +28,8 @@ export default function CreditNotesPage() {
   const pending = rows.filter((r) => r.status === 'Pending Approval')
   const issued = rows.filter((r) => r.status === 'Issued')
   const applied = rows.filter((r) => r.status === 'Applied')
-  const openInvoices = staticInvoices.filter((i) => outstanding(invoiceView(i, erp.invoiceOverrides), {}) > 0 && i.status !== 'Cancelled')
+  const liveInvoices = (erp.invoices || []).map((i) => ({ ...i, number: i.invoiceNumber, amount: i.total, paid: i.amountPaid, due: i.dueDate, status: i.status }))
+  const openInvoices = [...staticInvoices, ...liveInvoices].filter((i, index, list) => list.findIndex((x) => x.number === i.number) === index).filter((i) => outstanding(invoiceView(i, erp.invoiceOverrides), {}) > 0 && i.status !== 'Cancelled')
   const canManage = can(roleKey, 'invoices', 'approve') || can(roleKey, 'invoices', 'edit')
 
   const columns = [
@@ -48,7 +49,13 @@ export default function CreditNotesPage() {
     const inv = openInvoices.find((i) => i.number === form.invoice)
     const amount = Number(form.amount)
     if (!inv || !amount || amount > outstanding(invoiceView(inv, erp.invoiceOverrides), {})) { setNotice('Select an open invoice and enter an amount within its balance.'); return }
-    const number = erp.issueCreditNote({ buyer: inv.buyer, invoice: inv.number, amount, reason: form.reason || 'Manual credit requested by finance.', related: '' })
+    const live = inv.invoiceId ? liveInvoices.find((item) => item.number === inv.number) : null
+    let number
+    if (live) {
+      const result = erp.issueFinanceCreditNote(live.invoiceId, { amount, reason: form.reason, reference: `CN-${Date.now()}` })
+      if (!result.ok) { setNotice(result.reason); return }
+      number = `Credit note for ${inv.number}`
+    } else number = erp.issueCreditNote({ buyer: inv.buyer, invoice: inv.number, amount, reason: form.reason || 'Manual credit requested by finance.', related: '' })
     setNotice(`${number} drafted — now in Pending Approval. Email to buyer optional.`)
     setNewFor(false)
     setForm({ invoice: '', amount: '', reason: '' })
@@ -91,7 +98,7 @@ export default function CreditNotesPage() {
             <option value="">Select an open invoice...</option>
             {openInvoices.map((i) => <option key={i.number} value={i.number}>{i.number} · {i.buyer} (${outstanding(invoiceView(i, erp.invoiceOverrides), {}).toLocaleString()} open)</option>)}
           </SelectInput>
-          <TextInput label="Amount (USD)" type="number" min="0.01" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          <TextInput label="Credit amount" type="number" min="0.01" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           <Textarea label="Reason" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Why is the credit being issued?" />
           <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setNewFor(false)}>Cancel</button><button className="btn-primary">Draft credit note</button></div>
         </form>

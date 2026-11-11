@@ -1,0 +1,33 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Grid2X2, List, Search } from 'lucide-react'
+import PageHeader from '../../components/common/PageHeader'
+import { EmptyState, StatusBadge } from '../../components/ui'
+import { products as seedProducts } from '../../data'
+import { getStoredRecords } from '../../services/mockStore'
+import { catalogApi } from '../../services/apiClient'
+import { currency, number } from '../../utils/format'
+
+export default function BuyerCatalogPage() {
+  const [products, setProducts] = useState(() => import.meta.env.VITE_API_BASE_URL ? [] : getStoredRecords('products', seedProducts))
+  const [loading, setLoading] = useState(Boolean(import.meta.env.VITE_API_BASE_URL)); const [error, setError] = useState('')
+  useEffect(() => {
+    if (!import.meta.env.VITE_API_BASE_URL) return undefined
+    let active = true
+    catalogApi.list().then((response) => { if (active) setProducts((response.data || []).map((item) => ({ ...item, stock: item.available_stock, tiers: (item.pricing_tiers || []).map((tier) => ({ min: tier.minimum_quantity, max: tier.maximum_quantity, price: Number(tier.unit_price) })), category: item.category?.name || 'Uncategorized', price: Number(item.pricing_tiers?.[0]?.unit_price || 0), image: item.images?.[0]?.url || '' }))) }).catch((requestError) => { if (active) setError(requestError.message) }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+  const [query, setQuery] = useState(''); const [category, setCategory] = useState('all'); const [moq, setMoq] = useState('all'); const [stock, setStock] = useState('all'); const [sort, setSort] = useState('name'); const [view, setView] = useState('grid')
+  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))]
+  const filtered = useMemo(() => products.filter((p) => {
+    const text = `${p.name} ${p.sku} ${p.category}`.toLowerCase(); const matchesText = text.includes(query.toLowerCase().trim())
+    const matchesCategory = category === 'all' || p.category === category; const matchesMoq = moq === 'all' || Number(p.moq) <= Number(moq); const available = Number(p.stock || 0) > 0
+    return matchesText && matchesCategory && matchesMoq && (stock === 'all' || (stock === 'available' ? available : !available))
+  }).sort((a, b) => sort === 'price' ? Number(a.price) - Number(b.price) : sort === 'moq' ? Number(a.moq) - Number(b.moq) : String(a.name).localeCompare(String(b.name))), [products, query, category, moq, stock, sort])
+  return <div className="space-y-5"><PageHeader title="Buyer Catalog" description="Wholesale products with transparent MOQ, stock and tier pricing." actions={<div className="flex gap-2"><button aria-label="Grid view" className="btn-secondary" onClick={() => setView('grid')}><Grid2X2 size={15}/></button><button aria-label="List view" className="btn-secondary" onClick={() => setView('list')}><List size={15}/></button></div>}/>
+    {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {loading && <p className="text-sm text-slate-500" role="status">Loading catalog...</p>}
+    <div data-testid="buyer-catalog-toolbar" className="surface-card sticky top-16 z-20 grid gap-3 border border-slate-200/90 bg-white/95 p-4 shadow-sm backdrop-blur md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]"><label className="relative"><span className="sr-only">Search products</span><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input aria-label="Search products" className="form-control pl-9" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products, SKU or category"/></label><select aria-label="Category" className="form-control" value={category} onChange={(e) => setCategory(e.target.value)}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select><select aria-label="MOQ" className="form-control" value={moq} onChange={(e) => setMoq(e.target.value)}><option value="all">Any MOQ</option><option value="100">Up to 100</option><option value="500">Up to 500</option></select><select aria-label="Stock" className="form-control" value={stock} onChange={(e) => setStock(e.target.value)}><option value="all">All stock</option><option value="available">In stock</option><option value="empty">Backordered</option></select><select aria-label="Sort products" className="form-control" value={sort} onChange={(e) => setSort(e.target.value)}><option value="name">Sort: Name</option><option value="price">Sort: Price</option><option value="moq">Sort: MOQ</option></select></div>
+    {filtered.length === 0 ? <EmptyState title="No products found" text="Try changing your search or filters."/> : <div className={view === 'grid' ? 'grid gap-5 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-4'}>{filtered.map((p) => { const eligible = Number(p.stock || 0) >= Number(p.moq || 1) && Number(p.price || 0) > 0 && p.status !== 'Draft'; return <article key={p.id} className="surface-card overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg"><img src={p.image} alt={p.name} className="h-48 w-full object-cover"/><div className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-brand-700">{p.category}</p><h2 className="mt-1 font-bold text-slate-900">{p.name}</h2><p className="text-xs text-slate-500">SKU: {p.sku}</p></div><StatusBadge status={p.status}/></div><div className="grid grid-cols-2 gap-2 text-sm"><span><small className="block text-slate-500">From</small><strong>{currency(p.price)}</strong></span><span><small className="block text-slate-500">MOQ</small><strong>{number(p.moq)} {p.unit}s</strong></span><span><small className="block text-slate-500">Available</small><strong>{number(p.stock)}</strong></span><span><small className="block text-slate-500">Pricing</small><strong>{p.tiers?.length || 0} tiers</strong></span></div><div className="grid gap-2 sm:grid-cols-3"><Link className="btn-secondary justify-center" to={`/buyer/products/${p.id}`}>View details</Link><Link className="btn-secondary justify-center" to={`/buyer/rfqs/new?productId=${p.id}`}>Request quote</Link>{eligible ? <Link className="btn-primary justify-center" to={`/buyer/purchase-review?productId=${p.id}&quantity=${p.moq}&purchaseKey=buyer-${p.id}-${Date.now()}`}>Buy Now</Link> : <span className="rounded-md bg-slate-100 px-3 py-2 text-center text-xs text-slate-500">Unavailable</span>}</div></div></article> })}</div>}
+  </div>
+}

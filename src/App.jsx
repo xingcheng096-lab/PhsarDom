@@ -17,8 +17,14 @@ import { ProductFormPage, QuotationFormPage, RfqFormPage } from './pages/shared/
 import { PermissionsPage, ProfilePage, SettingsPage } from './pages/shared/AccountPages'
 import DepartmentHome from './pages/shared/DepartmentHome'
 import NotFoundPage from './pages/NotFoundPage'
+import AdminKycPage from './pages/admin/AdminKycPage'
 import LoadingState from './components/ui/LoadingState'
 import DashboardLayout from './layouts/DashboardLayout'
+import BuyerCatalogPage from './pages/buyer/BuyerCatalogPage'
+import BuyerProductDetailPage from './pages/buyer/BuyerProductDetailPage'
+import DirectPurchaseReviewPage from './pages/buyer/DirectPurchaseReviewPage'
+import { BuyerQuotationsPage, BuyerPurchaseOrdersPage, BuyerShipmentsPage, BuyerInvoicesPage } from './pages/buyer/BuyerPurchasingPages'
+import { BuyerLiveRfqsPage, AdminLiveProcurementPage } from './pages/procurement/LiveProcurementPages'
 import { adminNav, financeNav, managerNav, warehouseNav } from './routes/navigation'
 import { ROLE_MAP } from './services/session'
 
@@ -32,6 +38,7 @@ const CreditRequestDetailPage = lazy(() => import('./pages/finance/CreditRequest
 const FinanceBuyerDetailPage = lazy(() => import('./pages/finance/FinanceBuyerDetailPage'))
 const CreditNotesPage = lazy(() => import('./pages/finance/CreditNotesPage'))
 const AgingPage = lazy(() => import('./pages/finance/AgingPage'))
+const CommissionPage = lazy(() => import('./pages/finance/CommissionPage'))
 const LocationsPage = lazy(() => import('./pages/warehouse/LocationsPage'))
 const ReceivingPage = lazy(() => import('./pages/warehouse/ReceivingPage'))
 const ReservationsPage = lazy(() => import('./pages/warehouse/ReservationsPage'))
@@ -50,7 +57,7 @@ const HelpCenterPage = lazy(() => import('./pages/support/HelpCenterPage'))
 
 const resource = (type, title, basePath, props={}) => <ResourcePage type={type} title={title} basePath={basePath} {...props}/>
 
-function ApprovalLayout({ children }) {
+function ApprovalLayout() {
   const { user } = useSession()
   const roleKey = user?.key || 'manager'
   const role = ROLE_MAP[roleKey] || ROLE_MAP.manager
@@ -72,7 +79,7 @@ const dept = (root, roleKey, children) => (
 export default function App() {
   return <SessionProvider><ErpProvider><Suspense fallback={<div className="p-6"><LoadingState /></div>}><Routes>
     <Route element={<PublicLayout/>}>
-      <Route index element={<HomePage/>}/><Route path="products" element={<ProductsPage/>}/><Route path="products/:id" element={<ProductDetailPage/>}/><Route path="categories" element={<CategoriesPage/>}/><Route path="categories/:slug" element={<CategoryPage/>}/><Route path="about" element={<AboutPage/>}/><Route path="privacy" element={<LegalPage type="Privacy Policy"/>}/><Route path="terms" element={<LegalPage type="Terms of Service"/>}/>
+      <Route index element={<HomePage/>}/><Route path="products" element={<ProductsPage/>}/><Route path="products/detail" element={<Navigate to="/products" replace/>}/><Route path="products/:id" element={<ProductDetailPage/>}/><Route path="categories" element={<CategoriesPage/>}/><Route path="categories/:slug" element={<CategoryPage/>}/><Route path="about" element={<AboutPage/>}/><Route path="privacy" element={<LegalPage type="Privacy Policy"/>}/><Route path="terms" element={<LegalPage type="Terms of Service"/>}/>
     </Route>
     <Route path="login" element={<LoginPage/>}/><Route path="register" element={<RegisterPage/>}/><Route path="pending-approval" element={<PendingApprovalPage/>}/><Route path="forgot-password" element={<ForgotPasswordPage/>}/>
 
@@ -82,13 +89,13 @@ export default function App() {
 
     <Route path="buyer" element={<RoleGuard roles={['buyer']}><BuyerLayout/></RoleGuard>}>
       <Route index element={<Navigate to="dashboard" replace/>}/><Route path="dashboard" element={<DashboardPage role="buyer"/>}/>
-      <Route path="products" element={resource('products','Product Catalog','/buyer/products')}/><Route path="products/:id" element={<DetailPage type="products" title="Product"/>}/><Route path="categories" element={resource('categories','Product Categories')}/>
-      <Route path="rfqs" element={resource('rfqs','Requests for Quote','/buyer/rfqs',{addLabel:'Create RFQ'})}/><Route path="rfqs/new" element={<RfqFormPage/>}/><Route path="rfqs/:id" element={<DetailPage type="rfqs" title="RFQ"/>}/>
-      <Route path="quotations" element={resource('quotations','Quotations','/buyer/quotations')}/><Route path="quotations/:id" element={<DetailPage type="quotations" title="Quotation"/>}/>
-      <Route path="purchase-orders" element={resource('purchaseOrders','Purchase Orders','/buyer/purchase-orders')}/><Route path="purchase-orders/:id" element={<DetailPage type="purchaseOrders" title="Purchase Order"/>}/>
+      <Route path="products" element={<BuyerCatalogPage/>}/><Route path="products/:id" element={<BuyerProductDetailPage/>}/><Route path="purchase-review" element={<DirectPurchaseReviewPage/>}/><Route path="categories" element={resource('categories','Product Categories')}/>
+      <Route path="rfqs" element={<BuyerLiveRfqsPage/>}/><Route path="rfqs/new" element={<RfqFormPage/>}/><Route path="rfqs/:id" element={<DetailPage type="rfqs" title="RFQ"/>}/>
+      <Route path="quotations" element={<BuyerQuotationsPage/>}/><Route path="quotations/:id" element={<DetailPage type="quotations" title="Quotation"/>}/>
+      <Route path="purchase-orders" element={<BuyerPurchaseOrdersPage/>}/><Route path="purchase-orders/:id" element={<DetailPage type="purchaseOrders" title="Purchase Order"/>}/>
       <Route path="contracts" element={resource('contracts','Contracts','/buyer/contracts')}/><Route path="contracts/:id" element={<DetailPage type="contracts" title="Contract"/>}/>
-      <Route path="invoices" element={resource('invoices','Invoices','/buyer/invoices')}/><Route path="invoices/:id" element={<DetailPage type="invoices" title="Invoice"/>}/><Route path="credit" element={resource('credit','Credit Status')}/>
-      <Route path="shipments" element={resource('shipments','Shipments','/buyer/shipments')}/><Route path="shipments/:id" element={<DetailPage type="shipments" title="Shipment"/>}/>
+      <Route path="invoices" element={<BuyerInvoicesPage/>}/><Route path="invoices/:id" element={<DetailPage type="invoices" title="Invoice"/>}/><Route path="credit" element={resource('credit','Credit Status')}/>
+      <Route path="shipments" element={<BuyerShipmentsPage/>}/><Route path="shipments/:id" element={<DetailPage type="shipments" title="Shipment"/>}/>
       <Route path="profile" element={<ProfilePage/>}/><Route path="documents" element={resource('documents','Business Documents')}/><Route path="notifications" element={resource('notifications','Notifications')}/>
     </Route>
 
@@ -111,9 +118,9 @@ export default function App() {
 
     <Route path="admin" element={<RoleGuard roles={['admin']}><AdminLayout/></RoleGuard>}>
       <Route index element={<Navigate to="dashboard" replace/>}/><Route path="dashboard" element={<DashboardPage role="admin"/>}/>
-      <Route path="buyers" element={resource('buyers','All Buyers','/admin/buyers')}/><Route path="buyers/pending" element={resource('buyers','Pending Buyer Verification','/admin/buyers',{filterStatus:'Pending'})}/><Route path="buyers/approved" element={resource('buyers','Approved Buyers','/admin/buyers',{filterStatus:'Approved'})}/><Route path="buyers/rejected" element={resource('buyers','Rejected Buyers','/admin/buyers',{filterStatus:'Rejected'})}/><Route path="buyers/suspended" element={resource('buyers','Suspended Buyers','/admin/buyers',{filterStatus:'Suspended'})}/><Route path="buyers/:id" element={<DetailPage type="buyers" title="Buyer Verification"/>}/>
+      <Route path="buyers" element={resource('buyers','All Buyers','/admin/buyers')}/><Route path="buyers/pending" element={<AdminKycPage/>}/><Route path="buyers/approved" element={resource('buyers','Approved Buyers','/admin/buyers',{filterStatus:'Approved'})}/><Route path="buyers/rejected" element={resource('buyers','Rejected Buyers','/admin/buyers',{filterStatus:'Rejected'})}/><Route path="buyers/suspended" element={resource('buyers','Suspended Buyers','/admin/buyers',{filterStatus:'Suspended'})}/><Route path="buyers/:id" element={<DetailPage type="buyers" title="Buyer Verification"/>}/>
       <Route path="products" element={resource('products','Products','/admin/products',{addLabel:'Create Product'})}/><Route path="products/new" element={<ProductFormPage/>}/><Route path="products/:id" element={<DetailPage type="products" title="Product"/>}/><Route path="categories" element={resource('categories','Categories')}/><Route path="pricing-tiers" element={resource('pricing','Pricing Tiers')}/>
-      <Route path="rfqs" element={resource('rfqs','RFQs','/admin/rfqs')}/><Route path="rfqs/:id" element={<DetailPage type="rfqs" title="RFQ"/>}/><Route path="quotations" element={resource('quotations','Quotations','/admin/quotations')}/><Route path="quotations/:id" element={<DetailPage type="quotations" title="Quotation"/>}/><Route path="purchase-orders" element={resource('purchaseOrders','Purchase Orders','/admin/purchase-orders')}/><Route path="purchase-orders/:id" element={<DetailPage type="purchaseOrders" title="Purchase Order"/>}/><Route path="contracts" element={resource('contracts','Contracts','/admin/contracts')}/><Route path="contracts/:id" element={<DetailPage type="contracts" title="Contract"/>}/>
+      <Route path="rfqs" element={<AdminLiveProcurementPage/>}/><Route path="rfqs/:id" element={<DetailPage type="rfqs" title="RFQ"/>}/><Route path="quotations" element={<AdminLiveProcurementPage/>}/><Route path="quotations/:id" element={<DetailPage type="quotations" title="Quotation"/>}/><Route path="purchase-orders" element={resource('purchaseOrders','Purchase Orders','/admin/purchase-orders')}/><Route path="purchase-orders/:id" element={<DetailPage type="purchaseOrders" title="Purchase Order"/>}/><Route path="contracts" element={resource('contracts','Contracts','/admin/contracts')}/><Route path="contracts/:id" element={<DetailPage type="contracts" title="Contract"/>}/>
       <Route path="warehouses" element={resource('warehouses','Warehouses','/admin/warehouses')}/><Route path="warehouses/:id" element={<DetailPage type="warehouses" title="Warehouse"/>}/><Route path="locations" element={resource('locations','Locations and Bins')}/><Route path="inventory" element={resource('inventory','Inventory Stock','/admin/inventory')}/><Route path="inventory/:id" element={<DetailPage type="inventory" title="Stock Detail"/>}/><Route path="reservations" element={resource('reservations','Stock Reservations')}/><Route path="backorders" element={resource('inventory','Backorders',null,{filterStatus:'Backordered'})}/>
       <Route path="invoices" element={resource('invoices','Invoices','/admin/invoices')}/><Route path="invoices/:id" element={<DetailPage type="invoices" title="Invoice"/>}/><Route path="credit" element={resource('credit','Credit Limits')}/><Route path="credit-notes" element={resource('creditNotes','Credit Notes')}/><Route path="payment-terms" element={resource('paymentTerms','Payment Terms')}/>
       <Route path="shipments" element={resource('shipments','Shipments','/admin/shipments')}/><Route path="shipments/:id" element={<DetailPage type="shipments" title="Shipment"/>}/><Route path="carriers" element={resource('carriers','Carriers')}/><Route path="deliveries" element={resource('deliveries','Deliveries')}/>
@@ -132,6 +139,7 @@ export default function App() {
         <Route path="aging" element={<AgingPage/>}/>
         <Route path="payment-terms" element={<ResourcePage type="paymentTerms" title="Payment Terms"/>}/>
         <Route path="reports" element={<ReportPage type="finance"/>}/>
+        <Route path="commissions" element={<CommissionPage/>}/>
       </>))}
     {dept('warehouse','warehouse',(<>
         <Route path="locations" element={<LocationsPage/>}/>

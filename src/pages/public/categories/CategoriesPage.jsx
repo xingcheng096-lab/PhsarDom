@@ -2,7 +2,6 @@
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  BadgeCheck,
   Boxes,
   Truck,
   ShieldCheck,
@@ -68,16 +67,6 @@ const categories = [
     color: "yellow",
   },
 ];
-
-const colors = {
-  blue: "text-blue-600 bg-blue-50",
-  green: "text-emerald-600 bg-emerald-50",
-  orange: "text-orange-600 bg-orange-50",
-  purple: "text-violet-600 bg-violet-50",
-  pink: "text-pink-600 bg-pink-50",
-  yellow: "text-amber-600 bg-amber-50",
-};
-
 
 function CategoryCard({ category }) {
   return (

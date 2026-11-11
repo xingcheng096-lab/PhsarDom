@@ -10,16 +10,19 @@ import {
   Textarea,
 } from "../../components/ui";
 import { quotations } from "../../data";
+import { getStoredRecords, decideQuotation } from "../../services/mockStore";
+import { useSession } from "../../services/session";
 import { currency } from "../../utils/format";
 
 export default function ApprovalsPage({ kind = "All" }) {
+  const { user } = useSession();
   const [rows, setRows] = useState(
-    quotations.map((quote, index) => ({
+    getStoredRecords("quotations", quotations).filter((quote) => quote.approval?.required).map((quote, index) => ({
       ...quote,
       type:
         index % 3 === 0 ? "Pricing" : index % 3 === 1 ? "Quotation" : "Credit",
       requester: index % 2 ? "Sophia Turner" : "Daniel Brooks",
-      status: index === 3 ? "Approved" : "Pending",
+      status: quote.approval?.status === "Approved" ? "Approved" : quote.approval?.status === "Rejected" ? "Rejected" : "Pending",
     })),
   );
   const [decision, setDecision] = useState(null);
@@ -35,17 +38,11 @@ export default function ApprovalsPage({ kind = "All" }) {
   );
   const confirm = (reason = "") => {
     const nextStatus = decision.action === "Approve" ? "Approved" : decision.action === "Reject" ? "Rejected" : "Revision Requested";
-    setRows(
-      rows.map((row) =>
-        row.id === decision.row.id
-          ? {
-              ...row,
-              status: nextStatus,
-              reason,
-            }
-          : row,
-      ),
-    );
+    if (decision.action !== "Approve" && !String(reason).trim()) return;
+    try {
+      const saved = decideQuotation(decision.row.id, nextStatus, { reason, actor: { id: user?.id, name: user?.name, label: user?.label, role: user?.key } });
+      setRows(rows.map((row) => row.id === decision.row.id ? { ...row, ...saved, status: nextStatus, reason } : row));
+    } catch (error) { setNotice(error.message); return; }
     setNotice(`${decision.row.number} updated to ${nextStatus}.`);
     setDecision(null);
   };

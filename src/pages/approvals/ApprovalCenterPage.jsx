@@ -84,7 +84,7 @@ export default function ApprovalCenterPage({ kind: propKind }) {
 
   const dynamic = useMemo(
     () => buildDynamicRows(erp),
-    [erp.creditRequests, erp.stockCounts, erp.creditNotes],
+    [erp],
   )
 
   const merged = useMemo(() => {

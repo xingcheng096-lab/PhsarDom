@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ArrowLeft,
-  Building2,
   CheckCircle2,
   Clock3,
   LockKeyhole,
@@ -19,6 +18,8 @@ import {
   TextInput,
 } from "../../components/ui";
 import { saveRecord } from "../../services/mockStore";
+import { buyers as seedBuyers } from "../../data";
+import { authApi } from "../../services/apiClient";
 
 function AuthShell({ title, subtitle, children }) {
   return (
@@ -83,10 +84,12 @@ function AuthShell({ title, subtitle, children }) {
 export function LoginPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { login } = useSession();
+  const { login, loginWithApi } = useSession();
   const from = params.get("from");
   const [error, setError] = useState("");
   const [submitting,setSubmitting]=useState(false);
+  const [selectedBuyerId, setSelectedBuyerId] = useState("1");
+  const demoBuyers = (() => { try { const stored = JSON.parse(localStorage.getItem("meridian-demo-buyers") || "[]"); const ids = new Set(stored.map((item) => String(item.id))); return [...stored, ...seedBuyers.filter((item) => !ids.has(String(item.id)))]; } catch { return seedBuyers; } })();
   const go = (role, fallback) => {
     const dest = from && (from.startsWith("/buyer") || from.startsWith("/sales") || from.startsWith("/manager") || from.startsWith("/admin") || from.startsWith("/finance") || from.startsWith("/warehouse") || from.startsWith("/inventory-staff") || from.startsWith("/logistics") || from.startsWith("/support")) ? from : fallback;
     return dest;
@@ -96,7 +99,12 @@ export function LoginPage() {
     const data = new FormData(e.currentTarget);
     if (!data.get("email") || !data.get("password"))
       return setError("Enter both your business email and password.");
-    if(submitting)return;setSubmitting(true);login("buyer");setTimeout(()=>navigate(go("buyer","/buyer/dashboard")),400);
+    if(submitting)return;setSubmitting(true);
+    if (import.meta.env.VITE_API_BASE_URL) {
+      loginWithApi({ email: data.get("email"), password: data.get("password") }).then((next) => navigate(go(next.key, next.home))).catch((loginError) => { setError(loginError.message || "Unable to sign in."); setSubmitting(false); });
+    } else {
+      login("buyer", selectedBuyerId); setTimeout(()=>navigate(go("buyer","/buyer/dashboard")),400);
+    }
   };
   return (
     <AuthShell
@@ -140,8 +148,14 @@ export function LoginPage() {
         <span className="h-px flex-1 bg-slate-200" />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
+        <div className="sm:col-span-2 rounded-lg border border-dashed border-brand-200 bg-brand-50/50 p-3">
+          <SelectInput label="Demo buyer account (frontend prototype)" value={selectedBuyerId} onChange={(e) => setSelectedBuyerId(e.target.value)}>
+            {demoBuyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.business} · {buyer.status}</option>)}
+          </SelectInput>
+          <p className="mt-1 text-[11px] text-slate-500">Demo account selection only; this is not production authentication.</p>
+        </div>
         {ROLES.map((r) => (
-          <button onClick={() => { login(r.key); navigate(r.home) }} className="btn-secondary" key={r.key}>
+          <button onClick={() => { login(r.key, r.key === "buyer" ? selectedBuyerId : undefined); navigate(go(r.key, r.home)) }} className="btn-secondary" key={r.key}>
             Login as {r.label}
           </button>
         ))}
@@ -160,6 +174,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [submitting,setSubmitting]=useState(false);
+  const [error, setError] = useState("");
   const [data, setData] = useState({
     business: "",
     industry: "Retail",
@@ -172,10 +187,24 @@ export function RegisterPage() {
     spend: "$10,000 - $50,000",
   });
   const update = (key) => (e) => setData({ ...data, [key]: e.target.value });
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (step === 1) setStep(2);
-    else { if(submitting)return;setSubmitting(true);saveRecord("buyers",{id:Date.now(),business:data.business,contact:data.contact,email:data.email,industry:data.industry,creditLimit:0,status:"Pending",rep:"Unassigned",registered:new Date().toISOString().slice(0,10),phone:data.phone,address:data.address,taxId:data.taxId});setTimeout(()=>navigate("/pending-approval"),450); }
+    else {
+      if(submitting)return;
+      setSubmitting(true); setError("");
+      try {
+        if (import.meta.env.VITE_API_BASE_URL) {
+          await authApi.register({ name: data.contact, email: data.email, password: data.password, legal_name: data.business, registration_number: data.taxId, profile: { industry: data.industry, address: data.address, phone: data.phone, spend: data.spend }, kyc_metadata: { tax_id: data.taxId, industry: data.industry, address: data.address, phone: data.phone } });
+        } else {
+          const id=Date.now(); const submitted=new Date().toISOString().slice(0,10); saveRecord("buyers",{id,business:data.business,contact:data.contact,email:data.email,industry:data.industry,creditLimit:0,status:"Pending",kycStatus:"Pending",rep:"Unassigned",registered:submitted,phone:data.phone,address:data.address,taxId:data.taxId,documents:[{id:`${id}-license`,name:"Business license",type:"Business License",status:"Pending",submittedAt:submitted},{id:`${id}-tax`,name:"Tax document",type:"Tax Document",status:"Pending",submittedAt:submitted}]});
+        }
+        navigate("/pending-approval");
+      } catch (submissionError) {
+        setError(submissionError.message || "Registration could not be completed.");
+        setSubmitting(false);
+      }
+    }
   };
   return (
     <AuthShell
@@ -189,6 +218,7 @@ export function RegisterPage() {
         />
       </div>
       <form className="mt-6 space-y-4" onSubmit={submit}>
+        {error && <Alert>{error}</Alert>}
         {step === 1 ? (
           <>
             <TextInput

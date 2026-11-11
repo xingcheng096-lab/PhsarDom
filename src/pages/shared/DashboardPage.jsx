@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import PageHeader from "../../components/common/PageHeader";
 import {
   ChartCard,
@@ -40,10 +40,12 @@ import {
   purchaseOrders,
   quotations,
   rfqs,
-  shipments,
 } from "../../data";
 import { assignedPipeline, bookedValueByRep, buyerGrowthSeries, categoryRevenue, conversionSeries, dealPipeline, invoiceStatus, orderSeries, revenueSeries, rfqStatusData } from "../../data/chartData";
 import { currency } from "../../utils/format";
+import { useSession } from "../../services/session";
+import { getStoredRecords, ownsBuyerRecord } from "../../services/mockStore";
+import { useErp } from "../../services/erpStore";
 
 const dashboardConfig = {
   buyer: {
@@ -104,19 +106,38 @@ const rfqColumns = [
   { key: "status", label: "Status" },
 ];
 export default function DashboardPage({ role }) {
-  const cfg = dashboardConfig[role];
+  const { user } = useSession();
+  const erp = useErp();
+  const buyerRecords = useMemo(() => {
+    if (role !== "buyer") return null;
+    const buyer = { buyerId: user?.buyerId, buyerBusiness: user?.buyerBusiness };
+    return {
+      rfqs: getStoredRecords("rfqs", rfqs).filter((record) => ownsBuyerRecord(record, buyer)),
+      quotations: getStoredRecords("quotations", quotations).filter((record) => ownsBuyerRecord(record, buyer)),
+      purchaseOrders: [...(erp.purchaseOrders || [])].filter((record) => ownsBuyerRecord(record, buyer)),
+      shipments: (erp.shipments || []).filter((record) => ownsBuyerRecord(record, buyer)),
+      invoices: (erp.invoices || []).filter((record) => ownsBuyerRecord(record, buyer)),
+    };
+  }, [erp.invoices, erp.purchaseOrders, erp.shipments, role, user?.buyerBusiness, user?.buyerId]);
+  const buyerOutstanding = buyerRecords?.invoices.reduce((sum, invoice) => sum + Number(invoice.outstanding || 0), 0) || 0;
+  const cfg = role === "buyer" ? {
+    ...dashboardConfig.buyer,
+    description: `Welcome to PhsarDom. Purchasing activity for ${user?.buyerBusiness || "your business"}.`,
+    cards: [
+      ["Open RFQs", String(buyerRecords.rfqs.filter((record) => !["Closed", "Converted"].includes(record.status)).length), ClipboardList, "blue", "Current requests"],
+      ["Active Quotations", String(buyerRecords.quotations.filter((record) => !["Expired", "Rejected"].includes(record.status)).length), FileCheck2, "violet", "Review available offers"],
+      ["Purchase Orders", String(buyerRecords.purchaseOrders.length), ShoppingCart, "green", "Current orders"],
+      ["Outstanding Invoices", currency(buyerOutstanding), Receipt, "amber", "Persisted finance balance"],
+    ],
+  } : dashboardConfig[role];
   const navigate = useNavigate();
   const root = role;
-  const buyerQuotes = quotations.filter(
-    (x) => x.buyer === "Atlas Hospitality Group",
-  );
-  const buyerPOs = purchaseOrders.filter(
-    (x) => x.buyer === "Atlas Hospitality Group",
-  );
+  const buyerQuotes = buyerRecords?.quotations || [];
+  const buyerPOs = buyerRecords?.purchaseOrders || [];
   const salesRfqs = rfqs.filter((x) => x.rep === "Daniel Brooks");
   const currentRfqs =
     role === "buyer"
-      ? rfqs.filter((x) => x.buyer === "Atlas Hospitality Group")
+      ? buyerRecords.rfqs
       : role === "sales"
         ? salesRfqs
         : rfqs;
@@ -125,6 +146,13 @@ export default function DashboardPage({ role }) {
   const periodAction=<select aria-label="Chart period" value={period} onChange={(event)=>setPeriod(Number(event.target.value))} className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px]"><option value="3">3 Months</option><option value="6">6 Months</option></select>;
   const salesValueData=quotations.filter((quote)=>['Atlas Hospitality Group','Redwood Health Network'].includes(quote.buyer)).map((quote)=>({name:quote.buyer.replace(/ (Group|Network)$/,''),value:quote.amount}));
   const buyerOrderStatuses=Object.values(buyerPOs.reduce((result,order)=>{result[order.status]||={name:order.status,value:0};result[order.status].value+=1;return result},{}));
+  const buyerActivity = role === "buyer" ? [
+    ...buyerQuotes.map((record) => ({ id: `quote-${record.id}`, type: "Quotation", label: `${record.number || "Quotation"} received`, detail: `${record.items?.length || 1} item(s) · ${record.status || "Current"}`, date: record.created || record.createdAt, path: `/buyer/quotations/${record.id}` })),
+    ...buyerRecords.rfqs.map((record) => ({ id: `rfq-${record.id}`, type: "RFQ", label: `${record.number || "RFQ"} submitted`, detail: `${record.quantity || 0} units · ${record.status || "Current"}`, date: record.created || record.createdAt, path: `/buyer/rfqs/${record.id}` })),
+    ...buyerPOs.map((record) => ({ id: `po-${record.id}`, type: "Purchase Order", label: `${record.number || "Purchase Order"} created`, detail: `Total ${currency(record.amount || 0)}`, date: record.created || record.createdAt, path: `/buyer/purchase-orders/${record.id}` })),
+    ...(buyerRecords.shipments || []).map((record) => ({ id: `shipment-${record.id || record.shipmentId}`, type: "Shipment", label: `${record.number || record.shipmentNumber || "Shipment"} updated`, detail: record.status || "Current", date: record.created || record.createdAt, path: `/buyer/shipments/${record.id || record.shipmentId}` })),
+    ...(buyerRecords.invoices || []).map((record) => ({ id: `invoice-${record.invoiceId || record.id}`, type: "Invoice", label: `${record.invoiceNumber || "Invoice"} issued`, detail: `${record.status || "Current"} · ${currency(record.outstanding || 0)} outstanding`, date: record.issueDate || record.createdAt, path: `/buyer/invoices/${record.invoiceId || record.id}` })),
+  ].filter((item) => item.date).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 5) : [];
   return (
     <>
       <PageHeader
@@ -231,29 +259,32 @@ export default function DashboardPage({ role }) {
       </div>
       {role === "buyer" && (
         <div className="mt-5 grid gap-5 lg:grid-cols-3">
-          <Card title="Recommended next steps" className="lg:col-span-3" bodyClassName="grid gap-3 p-4 sm:grid-cols-3">
+          <Card title="Quick Actions" className="lg:col-span-3" bodyClassName="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
             <button type="button" onClick={() => navigate("/buyer/products")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><Package size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Find products</strong><small className="mt-1 block text-slate-500">Compare MOQ and volume pricing.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
             <button type="button" onClick={() => navigate("/buyer/rfqs/new")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><ClipboardList size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Request a quote</strong><small className="mt-1 block text-slate-500">Ask for negotiated commercial terms.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
             <button type="button" onClick={() => navigate("/buyer/purchase-orders")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><ShoppingCart size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">Track an order</strong><small className="mt-1 block text-slate-500">Review fulfillment and delivery status.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
+            <button type="button" onClick={() => navigate("/buyer/invoices")} className="group flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40"><Receipt size={18} className="mt-0.5 text-brand-600" /><span><strong className="block text-xs text-slate-900">View invoices</strong><small className="mt-1 block text-slate-500">Check balances and payment status.<ArrowRight className="ml-1 inline transition-transform group-hover:translate-x-1" size={12} /></small></span></button>
+          </Card>
+          <Card title="Recent Activity" className="lg:col-span-3" action={<button type="button" onClick={() => navigate("/buyer/quotations")} className="text-xs font-semibold text-brand-700">View all</button>}>
+            {buyerActivity.length ? buyerActivity.map((item) => <button type="button" key={item.id} onClick={() => navigate(item.path)} className="flex w-full items-center justify-between gap-3 border-b py-3 text-left last:border-0"><span className="min-w-0"><strong className="block truncate text-xs text-slate-900">{item.label}</strong><small className="mt-1 block truncate text-slate-500">{item.detail}</small></span><span className="shrink-0 text-[11px] text-slate-400">{item.type}</span></button>) : <p className="py-4 text-xs text-slate-500">No purchasing activity yet.</p>}
           </Card>
           <Card title="Credit Usage">
             <div className="flex justify-between">
-              <strong className="text-2xl">{currency(162500)}</strong>
+              <strong className="text-2xl">{currency(0)}</strong>
               <span className="text-xs text-slate-500">
-                of {currency(250000)}
+                of {currency(0)}
               </span>
             </div>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full w-[65%] rounded-full bg-brand-600 transition-[width] duration-700" />
+              <div className="h-full w-0 rounded-full bg-brand-600 transition-[width] duration-700" />
             </div>
             <div className="mt-2 flex justify-between text-xs text-slate-500">
-              <span>65% utilized</span>
-              <span>{currency(87500)} available</span>
+              <span>No exposure recorded</span>
+              <span>Available credit requires a finance account</span>
             </div>
           </Card>
           <Card title="Shipment Tracking" className="lg:col-span-2">
-            {shipments
-              .filter((x) => x.buyer === "Atlas Hospitality Group")
+            {(buyerRecords?.shipments || [])
               .map((s) => (
                 <button
                   type="button"

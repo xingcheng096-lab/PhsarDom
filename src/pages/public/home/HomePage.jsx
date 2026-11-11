@@ -3,21 +3,14 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   ArrowUpRight,
-  BadgeCheck,
   BadgeDollarSign,
-  BarChart3,
   Boxes,
   Building2,
   Check,
   CheckCircle2,
-  ChevronRight,
   ClipboardCheck,
   FileCheck2,
   FileText,
-  Globe2,
-  Headphones,
-  Layers3,
-  LockKeyhole,
   Package,
   PackageCheck,
   Search,
@@ -26,7 +19,6 @@ import {
   TrendingUp,
   Truck,
   Users,
-  Zap,
 } from "lucide-react";
 
 import heroImage from "../../../assets/phsardom-hero.png";

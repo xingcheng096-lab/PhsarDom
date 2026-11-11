@@ -3,7 +3,7 @@ import { Check, ClipboardList, PackageOpen, Timer } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
 import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import DataTable from '../../components/tables/DataTable'
-import { Alert, Modal, StatusBadge, Textarea, TextInput } from '../../components/ui'
+import { Alert, Modal, Textarea, TextInput } from '../../components/ui'
 import { num, sumBy } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
 
@@ -40,7 +40,7 @@ export default function PickingPage() {
     e.preventDefault()
     const n = Number(qty)
     if (!n || n <= 0) { setNotice('Enter a quantity greater than zero.'); return }
-    erp.recordPicked(step.id, n)
+    if (erp.recordPicked(step.id, n) === false) { setNotice('Picked quantity exceeds the remaining reserved quantity.'); return }
     setNotice(`${num(n)} units picked on ${step.number} (${num(Math.min(step.picked + n, step.qty))}/${num(step.qty)}).`)
     setAct(null)
   }
@@ -51,7 +51,7 @@ export default function PickingPage() {
     setAct(null)
   }
   const runComplete = () => {
-    erp.completePick(step.id)
+    if (erp.completePick(step.id) === false) { setNotice('Pick cannot be completed until the reserved quantity is valid.'); return }
     setNotice(`${step.number} complete — ${num(step.picked)} units confirmed picked. Reserved stock decremented and movement posted.`)
     setAct(null)
   }

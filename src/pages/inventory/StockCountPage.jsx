@@ -6,10 +6,8 @@ import DataTable from '../../components/tables/DataTable'
 import { Alert, ConfirmDialog, Modal, SelectInput, StatusBadge, TextInput } from '../../components/ui'
 import { num } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
-import { useSession } from '../../services/session'
 
 export default function StockCountPage() {
-  const { user } = useSession()
   const erp = useErp()
   const [notice, setNotice] = useState('')
   const [newCount, setNewCount] = useState(false)

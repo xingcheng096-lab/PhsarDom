@@ -1,9 +1,9 @@
-import { Activity, Banknote, BarChart3, Bell, Boxes, BriefcaseBusiness, Building2, ClipboardCheck, ClipboardList, Contact, CreditCard, FileCheck2, FileText, Gauge, Headphones, Landmark, LifeBuoy, Package, PackageSearch, Receipt, Route, ScanLine, Settings, ShieldCheck, ShoppingCart, Tags, Truck, UserCog, Users, Warehouse } from 'lucide-react'
+import { Activity, BarChart3, Bell, Boxes, BriefcaseBusiness, Building2, ClipboardCheck, ClipboardList, Contact, CreditCard, FileCheck2, FileText, Gauge, Headphones, Landmark, LifeBuoy, Package, PackageSearch, Receipt, Route, ScanLine, Settings, ShieldCheck, ShoppingCart, Tags, Truck, UserCog, Users, Warehouse } from 'lucide-react'
 
 export const buyerNav = [
   { label: 'MAIN', items: [{ label: 'Dashboard', path: '/buyer/dashboard', icon: Gauge }] },
   { label: 'CATALOG', items: [{ label: 'Catalog', icon: Package, children: [{ label: 'Products', path: '/buyer/products' }, { label: 'Categories', path: '/buyer/categories' }] }] },
-  { label: 'PURCHASING', items: [{ label: 'RFQs', path: '/buyer/rfqs', icon: ClipboardList }, { label: 'Quotations', path: '/buyer/quotations', icon: FileText }, { label: 'Purchase Orders', path: '/buyer/purchase-orders', icon: ShoppingCart }, { label: 'Contracts', path: '/buyer/contracts', icon: FileCheck2 }] },
+  { label: 'PURCHASING', items: [{ label: 'My RFQs', path: '/buyer/rfqs', icon: ClipboardList }, { label: 'My Quotations', path: '/buyer/quotations', icon: FileText }, { label: 'Purchase Orders', path: '/buyer/purchase-orders', icon: ShoppingCart }, { label: 'Contracts', path: '/buyer/contracts', icon: FileCheck2 }] },
   { label: 'FINANCE & LOGISTICS', items: [{ label: 'Invoices', path: '/buyer/invoices', icon: Receipt }, { label: 'Credit Status', path: '/buyer/credit', icon: CreditCard }, { label: 'Shipments', path: '/buyer/shipments', icon: Truck }] },
   { label: 'ACCOUNT', items: [{ label: 'Business Profile', path: '/buyer/profile', icon: Building2 }, { label: 'Documents', path: '/buyer/documents', icon: FileText }, { label: 'Notifications', path: '/buyer/notifications', icon: Bell }] }
 ]
@@ -38,7 +38,7 @@ export const adminNav = [
 export const financeNav = [
   { label: 'MAIN', items: [{ label: 'Dashboard', path: '/finance/dashboard', icon: Gauge }] },
   { label: 'CREDIT & RISK', items: [{ label: 'Credit Requests', path: '/finance/credit-requests', icon: Landmark }, { label: 'Buyer Credit', path: '/finance/buyers', icon: Users }, { label: 'Aging / Exposure', path: '/finance/aging', icon: BarChart3 }] },
-  { label: 'FINANCE', items: [{ label: 'Invoices', path: '/finance/invoices', icon: Receipt }, { label: 'Credit Notes', path: '/finance/credit-notes', icon: FileText }, { label: 'Payment Terms', path: '/finance/payment-terms', icon: BriefcaseBusiness }] },
+  { label: 'FINANCE', items: [{ label: 'Invoices', path: '/finance/invoices', icon: Receipt }, { label: 'Credit Notes', path: '/finance/credit-notes', icon: FileText }, { label: 'Commissions', path: '/finance/commissions', icon: BarChart3 }, { label: 'Payment Terms', path: '/finance/payment-terms', icon: BriefcaseBusiness }] },
   { label: 'WORKSPACE', items: [{ label: 'Approvals', path: '/approvals', icon: ShieldCheck }, { label: 'Tasks', path: '/finance/tasks', icon: ClipboardCheck }, { label: 'Reports', path: '/finance/reports', icon: BarChart3 }, { label: 'Notifications', path: '/finance/notifications', icon: Bell }] }
 ]
 

@@ -1,4 +1,3 @@
-import { ROLES } from './session'
 
 export const ERP_MODULES = [
   'buyers', 'products', 'pricing', 'rfqs', 'quotations', 'purchaseOrders',

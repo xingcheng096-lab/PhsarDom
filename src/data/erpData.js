@@ -2,7 +2,7 @@
 // These feed the ErpProvider (src/services/erpStore.jsx) and stay consistent with
 // the static enterprise records in ./index.js (buyers, POs, invoices, shipments).
 
-/* eslint-disable no-unused-vars */
+
 
 export const shipmentQty = {
   'SHP-2026-7712': 500,
@@ -81,7 +81,7 @@ export const seedReceiving = [
 
 export const seedPicking = [
   { id: 1, number: 'PK-2026-901', po: 'PO-2026-2141', buyer: 'Atlas Hospitality Group', product: 'Ergonomic Task Chair', sku: 'FURN-ERG8', warehouse: 'WH-CHI-01', bin: 'A4-13', qty: 740, picked: 0, priority: 'High', status: 'Waiting', neededBy: '2026-09-12', note: 'Full remaining balance of PO-2026-2141.' },
-  { id: 2, number: 'PK-2026-902', po: 'PO-2026-2140', buyer: 'Redwood Health Network', product: 'Commercial Surface Cleaner 5L', sku: 'CLEAN-PRO5', warehouse: 'WH-NJ-02', bin: 'A5-14', qty: 1000, picked: 0, priority: 'Medium', status: 'Assigned', neededBy: '2026-09-15', note: 'Assigned to Sofia Reyes.' },
+  { id: 2, number: 'PK-2026-902', po: 'PO-2026-2140', buyer: 'Redwood Health Network', product: 'Commercial Surface Cleaner 5L', sku: 'CLEAN-PRO5', warehouse: 'WH-NJ-02', bin: 'A5-14', qty: 1000, picked: 1000, priority: 'Medium', status: 'Picked', neededBy: '2026-09-15', note: 'Picked and ready for the matching pack line.' },
   { id: 3, number: 'PK-2026-903', po: 'PO-2026-2142', buyer: 'Summit BuildWorks LLC', product: '18V Cordless Drill Kit', sku: 'TOOL-DR18', warehouse: 'WH-DAL-04', bin: 'A6-15', qty: 250, picked: 0, priority: 'High', status: 'Waiting', neededBy: '2026-09-18', note: 'Holds pick against backorder replenishment.' },
   { id: 4, number: 'PK-2026-904', po: 'PO-2026-2139', buyer: 'BluePeak Logistics Inc.', product: 'Double Wall Shipping Cartons', sku: 'PACK-CT32', warehouse: 'WH-CHI-01', bin: 'A3-12', qty: 30000, picked: 0, priority: 'Medium', status: 'Waiting', neededBy: '2026-09-20', note: 'Packaging release 01 wave.' },
   { id: 5, number: 'PK-2026-900', po: 'PO-2026-2141', buyer: 'Atlas Hospitality Group', product: 'Ergonomic Task Chair', sku: 'FURN-ERG8', warehouse: 'WH-CHI-01', bin: 'A4-13', qty: 500, picked: 500, priority: 'High', status: 'Picked', neededBy: '2026-09-04', note: 'Picked and packed for SHP-2026-7712.' },

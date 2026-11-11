@@ -14,17 +14,20 @@ const tabs = ['Credit & Risk', 'Invoices', 'Payments']
 export default function FinanceBuyerDetailPage() {
   const { id } = useParams()
   const erp = useErp()
+  const { user } = useSession()
   const buyer = buyers.find((b) => b.id === Number(id)) || buyers.find((b) => String(b.id) === String(id))
   const [tab, setTab] = useState('Credit & Risk')
   const [newReq, setNewReq] = useState(false)
+  const [editCredit, setEditCredit] = useState(false)
   const [pay, setPay] = useState(null)
   const [notice, setNotice] = useState('')
   const [form, setForm] = useState({ requestedLimit: '', terms: 'Net-30', purpose: '' })
 
-  const invoices = useMemo(() => (buyer ? staticInvoices.filter((i) => i.buyer === buyer.business).map((i) => invoiceView(i, erp.invoiceOverrides)) : []) /* eslint-disable-line */, [buyer, erp.invoiceOverrides])
+  const invoices = useMemo(() => (buyer ? staticInvoices.filter((i) => i.buyer === buyer.business).map((i) => invoiceView(i, erp.invoiceOverrides)) : [])  , [buyer, erp.invoiceOverrides])
   const credits = (erp.creditRequests || []).filter((r) => r.buyer === buyer?.business)
   const latestApproved = credits.filter((r) => r.status === 'Approved').sort((a, b) => (b.decidedOn || '').localeCompare(a.decidedOn || ''))[0]
   const effectiveLimit = latestApproved ? latestApproved.requestedLimit : (buyer?.creditLimit || 0)
+  const creditAccount = erp.getCreditAccount(buyer?.id, { creditLimit: effectiveLimit, approvedTerms: latestApproved?.terms || 'Net-30' })
   const openInv = invoices.filter((i) => i.status !== 'Paid' && i.status !== 'Cancelled')
   const openAmt = openInv.reduce((s, i) => s + outstanding(i, {}), 0)
   const exposure = buyerExposure(buyer?.business, staticInvoices, erp.invoiceOverrides, erp.creditNotes)
@@ -63,14 +66,14 @@ export default function FinanceBuyerDetailPage() {
       <PageHeader
         title={buyer.business}
         description={`Buyer credit 360 · ${buyer.industry} · ${buyer.contact}`}
-        actions={<><button className="btn-secondary" onClick={() => { const inv = openInv.find((i) => outstanding(i, {}) > 0); if (inv) startPay(inv); else alert('No open invoices for this buyer.') }}><Banknote size={15} />Record payment</button><button className="btn-primary" onClick={() => setNewReq(true)}><Landmark size={15} />Request credit increase</button></>}
+        actions={<><button className="btn-secondary" onClick={() => { const inv = openInv.find((i) => outstanding(i, {}) > 0); if (inv) startPay(inv); else alert('No open invoices for this buyer.') }}><Banknote size={15} />Record payment</button>{['finance', 'admin', 'manager'].includes(user?.key) && <button className="btn-secondary" onClick={() => setEditCredit(true)}>Adjust credit limit</button>}<button className="btn-primary" onClick={() => setNewReq(true)}><Landmark size={15} />Request credit increase</button></>}
       />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
       {pendingReq && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs"><ShieldAlert size={14} className="text-amber-600" /><span className="font-semibold text-amber-900">Pending credit decision</span><span className="text-amber-800">{pendingReq.number} · {money(pendingReq.currentLimit)} → {money(pendingReq.requestedLimit)}</span><StatusBadge status={pendingReq.status} /></div>}
 
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Credit limit" value={money(effectiveLimit)} icon={Building2} tone="blue" trend={latestApproved ? 'updated by credit decision' : undefined} context={buyer.risk} />
-        <StatCard label="Open receivable" value={money(openAmt)} icon={TrendingUp} tone="amber" trend={`${openInv.length} invoices`} />
+        <StatCard label="Credit limit" value={money(creditAccount.creditLimit)} icon={Building2} tone="blue" trend={latestApproved ? 'updated by credit decision' : undefined} context={creditAccount.creditStatus} />
+        <StatCard label="Available credit" value={money(creditAccount.availableCredit)} icon={TrendingUp} tone="amber" trend={`${money(creditAccount.currentExposure)} exposed`} />
         <InfoBox label="Issued credits" value={money(exposure.credits)} icon={FileCheck2} tone="green" context="counter currency" />
         <InfoBox label="Risk level" value={<StatusBadge status={buyer.risk} />} icon={ShieldAlert} tone={String(buyer.risk).toLowerCase() === 'high' ? 'red' : String(buyer.risk).toLowerCase() === 'medium' ? 'amber' : 'green'} context={buyer.status} />
       </div>
@@ -128,6 +131,15 @@ export default function FinanceBuyerDetailPage() {
           <SelectInput label="Terms" value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })}>{['Net-30', 'Net-60', 'Net-90'].map((t) => <option key={t}>{t}</option>)}</SelectInput>
           <Textarea label="Purpose" value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="Business justification..." />
           <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setNewReq(false)}>Cancel</button><button className="btn-primary">Create request</button></div>
+        </form>
+      </Modal>
+
+      <Modal open={editCredit} title="Adjust buyer credit limit" onClose={() => setEditCredit(false)}>
+        <form onSubmit={(e) => { e.preventDefault(); const data = new FormData(e.currentTarget); const result = erp.updateCreditAccount(buyer.id, { creditLimit: Number(data.get('limit')), creditStatus: data.get('status'), approvedTerms: data.get('terms') }, { actor: user }); if (!result.ok) { setNotice(result.reason); return } setNotice('Credit limit updated and audited.'); setEditCredit(false) }} className="space-y-3">
+          <TextInput label="Credit limit (USD)" name="limit" type="number" min="0" step="100" required defaultValue={creditAccount.creditLimit} />
+          <SelectInput label="Credit status" name="status" defaultValue={creditAccount.creditStatus}><option>Active</option><option>Hold</option></SelectInput>
+          <SelectInput label="Approved terms" name="terms" defaultValue={creditAccount.approvedTerms}>{['Net-30', 'Net-60', 'Net-90'].map((term) => <option key={term}>{term}</option>)}</SelectInput>
+          <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setEditCredit(false)}>Cancel</button><button className="btn-primary">Save credit limit</button></div>
         </form>
       </Modal>
 

@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ArrowRight, BadgeCheck, Banknote, Check, CheckCircle2, ClipboardCopy, Clock3, Download, Eye, FileSearch, FileText, Handshake, MessageSquare, Package, Send, ShieldAlert, Truck, Undo2, X } from 'lucide-react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useSession } from '../../services/session'
+import { useErp } from '../../services/erpStore'
 import PageHeader from '../../components/common/PageHeader'
 import { Stepper, Timeline } from '../../components/common/Timeline'
 import { Alert, Card, ConfirmDialog, Modal, SelectInput, StatusBadge, Textarea, TextInput } from '../../components/ui'
@@ -17,7 +19,8 @@ import DocumentList from '../../components/b2b/kyc/DocumentList'
 import DocumentPreview from '../../components/b2b/kyc/DocumentPreview'
 import VerificationChecklist from '../../components/b2b/kyc/VerificationChecklist'
 import VerificationDecisionPanel from '../../components/b2b/kyc/VerificationDecisionPanel'
-import { getStoredRecords, saveRecord } from '../../services/mockStore'
+import { convertQuoteToPO, decideBuyer, getStoredRecords, ownsBuyerRecord, saveRecord, submitCounterOffer, submitRevisedOffer } from '../../services/mockStore'
+import { canAcceptQuote } from '../../domain/workflows'
 
 const sources = { buyers, products, rfqs, quotations, purchaseOrders, contracts, invoices, shipments, warehouses, inventory }
 const pathMap = { rfqs: 'rfqs', quotations: 'quotations', purchaseOrders: 'purchase-orders', contracts: 'contracts', invoices: 'invoices', shipments: 'shipments', buyers: 'buyers', inventory: 'inventory' }
@@ -33,9 +36,9 @@ const tabMap = {
   warehouses: ['Overview', 'Stock', 'Bins', 'Activity'],
   inventory: ['Overview', 'Movements', 'Activity'],
 }
-const quoteSteps = ['Draft', 'Manager Review', 'Sent to Buyer', 'Negotiation', 'Accepted']
+const _quoteSteps = ['Draft', 'Manager Review', 'Sent to Buyer', 'Negotiation', 'Accepted']
 const poSteps = ['Created', 'Approved', 'Processing', 'Partially Shipped', 'Completed']
-const verificationSteps = [
+const _verificationSteps = [
   ['Registration', 'Company profile submitted and contact verified'],
   ['Documents Submitted', 'Business documents uploaded for review'],
   ['Under Review', 'Verification team checking submitted documents'],
@@ -45,16 +48,11 @@ const verificationSteps = [
 
 function rootFor(location) { return location.pathname.split('/')[1] }
 function linkFor(root, type, id) { return `/${root}/${pathMap[type]}/${id}` }
-function statusActive(type, status) {
-  if (type === 'quotations') return ['Draft', 'Manager Review', 'Sent', 'Negotiating', 'Accepted'].indexOf(status) >= 0 ? quoteSteps.indexOf(status === 'Sent' ? 'Sent to Buyer' : status) : status === 'Sent' ? 2 : 1
-  if (type === 'purchaseOrders') return ['Pending', 'Approved', 'Processing', 'Partially Shipped', 'Completed'].indexOf(status)
-  return Math.max(0, ['Pending', 'Under Review', 'Quoted', 'Negotiating', 'Accepted'].indexOf(status))
-}
 
 function KeyValue({ label, children, className = '' }) {
   return <div className={className}><dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</dt><dd className="mt-1 break-words font-medium text-slate-800">{children}</dd></div>
 }
-function DetailGrid({ row, type }) {
+function DetailGrid({ row, type: _type }) {
   const exclude = ['id', 'image', 'tiers', 'description', 'specs', 'documents', 'notes', 'negotiations', 'approval', 'items', 'events', 'paymentSchedule', 'milestones', 'quotation', 'quote', 'listPrice', 'unitPrice', 'quantity', 'salesRep', 'submittedBy', 'verifiedAt', 'risk', 'group']
   const order = Object.keys(row).filter((key) => !exclude.includes(key))
   const format = (key, value) => {
@@ -103,9 +101,10 @@ function DocumentsSection({ docs, verification = false }) {
   const list = Array.isArray(docs) && docs.length ? docs : [{ id: 1, name: 'Business License 2026.pdf', type: 'Business License', uploaded: '2026-01-12', status: 'Verified' }, { id: 2, name: 'IRS Tax Certificate.pdf', type: 'Tax Certificate', uploaded: '2026-01-12', status: 'Verified' }, { id: 3, name: 'Company Registration.pdf', type: 'Company Registration', uploaded: '2026-01-12', status: 'Verified' }]
   return <Card title="Submitted Documents" subtitle="Commercial verification records" bodyClassName="p-5">{list.length ? <div className="grid gap-4 md:grid-cols-2">{list.map((doc) => <DocumentCard doc={doc} key={doc.id} verification={verification} />)}</div> : <p className="text-sm text-slate-500">No documents uploaded yet.</p>}</Card>
 }
-function ActivitySection({ type, rowId }) {
-  const items = activityLogs.length ? activityLogs.slice(0, 4) : []
-  return <Card title="Activity History" subtitle="Audit trail for this record">{items.map((log, index) => <div className="flex gap-3 border-b py-3 first:pt-0 last:border-0" key={log.id}><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Send size={14} /></span><div className="min-w-0"><strong className="text-xs">{log.description}</strong><small className="mt-1 block">{log.user} · {log.role} · {log.time} · {log.ip}</small></div></div>)}</Card>
+function ActivitySection({ type: _type, rowId, audit = [] }) {
+  const financeItems = audit.filter((entry) => String(entry.entityId) === String(rowId) || String(entry.invoiceId) === String(rowId) || String(entry.poId) === String(rowId))
+  const items = financeItems.length ? financeItems : (activityLogs.length ? activityLogs.slice(0, 4) : [])
+  return <Card title="Activity History" subtitle="Audit trail for this record">{items.map((log, index) => <div className="flex gap-3 border-b py-3 first:pt-0 last:border-0" key={log.id || index}><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Send size={14} /></span><div className="min-w-0"><strong className="text-xs">{log.action || log.description}</strong><small className="mt-1 block">{log.actor?.name || log.user || 'System'} · {log.actor?.role || log.role || 'Audit'} · {log.timestamp || log.time || ''}</small>{log.before && <small className="mt-1 block text-slate-500">Before: {JSON.stringify(log.before)} · After: {JSON.stringify(log.after)}</small>}</div></div>)}</Card>
 }
 function NegotiationThread({ negotiations }) {
   const items = Array.isArray(negotiations) && negotiations.length ? negotiations : []
@@ -171,7 +170,7 @@ function ApprovalBanner({ quote }) {
     {status === 'Pending' && <p className="mt-3 text-[11px] text-slate-500">Discount exceeds the {approval.threshold}% approval threshold. The Sales Manager must approve, reject, or request a revision before this quote can be finalized.</p>}
   </div>
 }
-function ProductPricingPanel({ product }) {
+export function ProductPricingPanel({ product }) {
   const [quantity, setQuantity] = useState(product.moq)
   const activeTier = [...product.tiers].reverse().find((t) => quantity >= t.min) || product.tiers[0]
   const nextTier = product.tiers.find((t) => t.min > quantity)
@@ -203,8 +202,8 @@ function ProductPricingPanel({ product }) {
     </div>
   </div>
 }
-function WorkspacePart({ title, children, action }) { return <Card title={title} action={action} bodyClassName="p-5">{children}</Card> }
-function QuoteWorkspace({ quote, onNotice }) {
+export function WorkspacePart({ title, children, action }) { return <Card title={title} action={action} bodyClassName="p-5">{children}</Card> }
+export function QuoteWorkspace({ quote, onNotice }) {
   const [price, setPrice] = useState(quote.unitPrice || 0)
   const [quantity, setQuantity] = useState(quote.quantity || 1)
   const subtotal = Number(price || 0) * Number(quantity || 0)
@@ -224,8 +223,15 @@ export default function DetailPage({ type, title }) {
   const { id } = useParams()
   const location = useLocation()
   const root = rootFor(location)
-  const found = getStoredRecords(type, sources[type] || []).find((item) => item.id === Number(id))
-  const availableTabs = tabMap[type] || ['Overview', 'Documents', 'Activity']
+  const { user } = useSession()
+  const erp = useErp()
+  const navigate = useNavigate()
+  const liveInvoices = useMemo(() => (erp.invoices || []).map((invoice) => ({ ...invoice, id: invoice.invoiceId, number: invoice.invoiceNumber, amount: invoice.total, paid: invoice.amountPaid, due: invoice.dueDate, terms: invoice.paymentTerms, items: (invoice.lineItems || []).map((line) => ({ name: line.description, qty: line.quantity, unit: line.unitPrice ?? line.unitPriceMinor / 100 })) })), [erp.invoices])
+  const liveShipments = useMemo(() => (erp.shipments || []).map((shipment) => ({ ...shipment, id: shipment.shipmentId, number: shipment.shipmentNumber, buyerId: shipment.buyerId, po: shipment.poId, tracking: shipment.trackingNumber })), [erp.shipments])
+  const found = useMemo(() => (type === 'invoices' ? liveInvoices : type === 'shipments' ? liveShipments.concat(getStoredRecords(type, sources[type] || [])) : getStoredRecords(type, sources[type] || [])).find((item) => String(item.id) === String(id) || String(item.invoiceNumber) === String(id) || String(item.number) === String(id)), [type, id, liveInvoices, liveShipments])
+  const privateTypes = ['rfqs', 'quotations', 'purchaseOrders', 'contracts', 'invoices', 'shipments']
+  const authorized = root !== 'buyer' || !privateTypes.includes(type) || ownsBuyerRecord(found, user)
+  const availableTabs = useMemo(() => tabMap[type] || ['Overview', 'Documents', 'Activity'], [type])
   const [tab, setTab] = useState(availableTabs[0])
   const [row, setRow] = useState(found)
   const [notice, setNotice] = useState('')
@@ -236,9 +242,9 @@ export default function DetailPage({ type, title }) {
   const isManager = root === 'manager'
   const isStaff = root === 'manager' || root === 'admin' || root === 'sales'
 
-  useEffect(() => { setTab(availableTabs[0]); setRow(found); setNotice(''); setModal(null); setConfirm(null) }, [id, type, availableTabs])
+  useEffect(() => { setTab(availableTabs[0]); setRow(found); setNotice(''); setModal(null); setConfirm(null) }, [id, type, availableTabs, found])
 
-  if (!found || !row) return <div className="surface-card p-10 text-center"><h1 className="text-xl font-semibold">Record not found</h1><p className="mt-2 text-slate-500">This record may have been removed or the address is invalid.</p><Link to={`/admin/dashboard`} className="btn-primary mt-5">Return to dashboard</Link></div>
+  if (!found || !row || !authorized) return <div className="surface-card p-10 text-center"><h1 className="text-xl font-semibold">Access denied</h1><p className="mt-2 text-slate-500">This record is not available for the current buyer account.</p><Link to="/buyer/dashboard" className="btn-primary mt-5">Return to dashboard</Link></div>
 
   const heading = row.number || row.name || row.business
   const copy = async () => { await navigator.clipboard?.writeText(heading); setNotice(`${heading} copied to clipboard.`) }
@@ -249,15 +255,35 @@ export default function DetailPage({ type, title }) {
     return next
   })
   const acceptQuote = () => {
-    const poId = Date.now()
-    const poNumber = `PO-DEMO-${poId}`
-    saveRecord('purchaseOrders', { id: poId, number: poNumber, buyer: row.buyer, supplier: 'PhsarDom Supplier Network', quote: row.number, amount: row.amount, terms: row.terms, delivery: row.delivery?.match(/\d{4}-\d{2}-\d{2}/)?.[0] || row.expiry, status: 'Pending', created: new Date().toISOString().slice(0, 10), ordered: row.quantity, shipped: 0, remaining: row.quantity, deliveryAddress: row.delivery || 'To be confirmed', paymentSchedule: [{ label: 'Due on confirmation', percent: 100, amount: row.amount, due: row.expiry, status: 'Upcoming' }], milestones: [{ label: 'Order Created', date: new Date().toISOString().slice(0, 10), status: 'Completed' }, { label: 'Supplier Confirmation', date: row.expiry, status: 'Pending' }] })
-    bump({ status: 'Accepted', negotiations: [...(row.negotiations || []), { user: row.buyer.split(' ')[0] === 'Atlas' ? 'Maya Chen' : row.buyer, role: 'Buyer', price: row.unitPrice, quantity: row.quantity, terms: row.terms, comment: 'Quote accepted.', time: now, status: 'Accepted' }] })
-    setNotice(`Quote accepted. Purchase order ${poNumber} created.`)
+    if (!canAcceptQuote(row)) return setNotice('This quotation is expired, not sent, or still awaiting approval.')
+    const accepted = { ...row, status: 'Accepted', negotiations: [...(row.negotiations || []), { actorId: user?.buyerId, user: user?.name || 'Buyer', role: user?.key || 'buyer', price: row.unitPrice, quantity: row.quantity, terms: row.terms, comment: 'Quote accepted.', time: now, status: 'Accepted' }] }
+    const buyer = getStoredRecords('buyers', buyers).find((item) => row.buyerId != null ? String(item.id) === String(row.buyerId) : item.business === row.buyer)
+    const po = convertQuoteToPO(accepted, { buyer, actor: { id: user?.id, name: user?.name || 'Buyer', role: user?.key || 'buyer', buyerId: user?.buyerId } })
+    saveRecord('quotations', accepted)
+    setRow(accepted)
+    setNotice(`Quote accepted. Purchase order ${po.number} created.`)
+  }
+  const saveCounterOffer = (offer) => {
+    try { const next = submitCounterOffer(row.id, offer, { id: user?.buyerId, name: user?.name, role: user?.key, buyerId: user?.buyerId, buyerBusiness: user?.buyerBusiness }); setRow(next); setNotice('Counter offer submitted. Counteroffer saved and sent to sales.') } catch (error) { setNotice(error.message) }
+  }
+  const saveRevisedOffer = (offer) => {
+    try { const next = submitRevisedOffer(row.id, offer, { name: user?.name, role: user?.key }); setRow(next); setNotice('Revised quotation saved and sent to buyer.') } catch (error) { setNotice(error.message) }
+  }
+  const confirmPurchaseOrder = () => {
+    const sourceQuote = quotations.find((quote) => quote.number === row.quote)
+    const linkedReservation = erp.reservations.find((reservation) => reservation.po === row.number || String(reservation.poId) === String(row.id))
+    const result = erp.confirmPurchaseOrder({ ...row, product: row.product || sourceQuote?.product || linkedReservation?.product, sku: row.sku || linkedReservation?.sku, quantity: row.quantity || row.ordered }, { actor: user })
+    if (!result.ok) { setNotice(result.reason); return }
+    if (!result.duplicate) { const next = { ...row, status: 'Approved', fulfillment: { reserved: (result.reservations || []).reduce((sum, item) => sum + Number(item.qty), 0), backordered: result.backordered || 0 } }; saveRecord('purchaseOrders', next); setRow(next); setNotice(`Purchase order confirmed. ${result.backordered ? `${result.backordered} units backordered.` : 'Stock reserved.'}`) }
+    else setNotice('Purchase order was already confirmed; no duplicate reservation created.')
+  }
+  const generateInvoice = () => {
+    const result = erp.generateInvoiceFromPO(row, { actor: user })
+    if (!result.ok) { setNotice(result.reason); return }
+    setNotice(result.duplicate ? 'An invoice already exists for this purchase order.' : `Invoice ${result.invoice.invoiceNumber} generated.`)
+    navigate(`/${root}/invoices/${result.invoice.invoiceId}`)
   }
   const openModal = (kind) => { setForm({ reason: '', targetDoc: '', price: row.unitPrice || '', quantity: row.quantity || '', terms: row.terms || 'Net-30', comment: '', note: '' }); setModal(kind) }
-
-  const verification = type === 'buyers' ? verificationSteps.map(([label, sub], index) => ({ label, sub, done: ['Approved'].includes(row.status) ? index < 4 : index < ({ Pending: 1, 'Under Review': 2, 'Need More Information': 2, Rejected: 3, Suspended: 2, Approved: 4 }[row.status] || 1), current: index === ({ Pending: 1, 'Under Review': 2, 'Need More Information': 2, Rejected: 3, Suspended: 2, Approved: 4 }[row.status] || 1) })) : []
 
   const headerActions = []
   if (type === 'buyers' && (root === 'admin' || root === 'sales')) {
@@ -278,6 +304,8 @@ export default function DetailPage({ type, title }) {
     headerActions.push(<button className="btn-secondary" key="rev" onClick={() => openModal('revision')}><Undo2 size={15} /> Request Revision</button>)
   }
   if (type === 'quotations' && root === 'sales' && row.status === 'Draft') headerActions.push(<button className="btn-primary" key="send" onClick={() => setConfirm('sendQuote')}><Send size={15} /> Send to Buyer</button>)
+  if (type === 'purchaseOrders' && ['admin', 'manager', 'warehouse'].includes(user?.key) && ['Pending', 'Approved'].includes(row.status)) headerActions.push(<button className="btn-primary" key="confirmPO" onClick={confirmPurchaseOrder}>Confirm Purchase Order</button>)
+  if (type === 'purchaseOrders' && ['admin', 'finance'].includes(user?.key) && ['Approved', 'Processing', 'Partially Shipped', 'Completed'].includes(row.status)) headerActions.push(<button className="btn-secondary" key="generateInvoice" onClick={generateInvoice}>Generate Invoice</button>)
   if (type === 'purchaseOrders' && (root === 'admin' || root === 'sales') && row.remaining > 0) headerActions.push(<button className="btn-primary" key="ship" onClick={() => setConfirm('ship')}><Truck size={15} /> Record Shipment</button>)
   if (type === 'contracts' && (root === 'admin' || root === 'sales') && row.status === 'Expiring') headerActions.push(<button className="btn-primary" key="renew" onClick={() => setConfirm('renew')}>Renew Contract</button>)
   if (type === 'products') headerActions.push(<button className="btn-secondary" key="copy" onClick={copy}><ClipboardCopy size={15} /> Copy SKU</button>)
@@ -288,7 +316,7 @@ export default function DetailPage({ type, title }) {
 
   const panel = () => {
     if (tab === 'Documents') return <DocumentsSection docs={row.documents} verification={type === 'buyers'} />
-    if (tab === 'Activity') return <ActivitySection type={type} rowId={row.id} />
+    if (tab === 'Activity') return <ActivitySection type={type} rowId={row.id} audit={erp.audit} />
 
     if (type === 'buyers') {
       const scopedRfqs = rfqs.filter((item) => item.buyer === row.business)
@@ -349,15 +377,19 @@ export default function DetailPage({ type, title }) {
 
     if (type === 'quotations') {
       if (tab === 'Pricing') return <PricingSection quote={row} />
-      if (tab === 'Overview') return <div className="space-y-5"><RfqQuoteWorkspace quote={row} onNotice={setNotice} onAccept={acceptQuote} /><ApprovalBanner quote={row} /></div>
+      if (tab === 'Overview') return <div className="space-y-5"><RfqQuoteWorkspace quote={row} onNotice={setNotice} onAccept={acceptQuote} onCounterOffer={isBuyer ? saveCounterOffer : undefined} onRevision={isStaff ? saveRevisedOffer : undefined} /><ApprovalBanner quote={row} /></div>
       return null
     }
 
     if (type === 'purchaseOrders') {
       const pct = Math.min(100, Math.round((row.shipped / row.ordered) * 100))
+      const poReservations = erp.reservations.filter((item) => String(item.poId) === String(row.id) || item.po === row.number)
+      const reservedQty = poReservations.reduce((sum, item) => sum + Number(item.qty || 0), 0)
+      const reconciliation = erp.getPOShipmentReconciliation(row.id)
+      const fulfillmentCard = <Card title="Fulfillment quantities" subtitle="Persisted warehouse and shipment state" bodyClassName="p-5"><div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4"><span className="rounded-md bg-slate-50 p-2"><small className="block text-slate-500">Ordered</small><strong>{number(reconciliation.ordered || row.ordered)}</strong></span><span className="rounded-md bg-blue-50 p-2"><small className="block text-blue-600">Packed</small><strong>{number(reconciliation.packed)}</strong></span><span className="rounded-md bg-violet-50 p-2"><small className="block text-violet-600">Allocated / Dispatched</small><strong>{number(reconciliation.allocated)} / {number(reconciliation.dispatched)}</strong></span><span className="rounded-md bg-emerald-50 p-2"><small className="block text-emerald-600">Delivered</small><strong>{number(reconciliation.delivered)}</strong></span></div><div className="mt-3 grid grid-cols-2 gap-3 text-center sm:grid-cols-3"><span className="rounded-md bg-amber-50 p-2"><small className="block text-amber-600">Remaining shippable</small><strong>{number(reconciliation.remainingShippable)}</strong></span><span className="rounded-md bg-slate-50 p-2"><small className="block text-slate-600">Remaining unfulfilled</small><strong>{number(reconciliation.remainingUnfulfilled)}</strong></span><span className="rounded-md bg-violet-50 p-2"><small className="block text-violet-600">Reserved</small><strong>{number(reservedQty)}</strong></span></div>{poReservations.length > 0 && <div className="mt-4 border-t pt-3 text-xs text-slate-600">Warehouses: {poReservations.map((item) => `${item.warehouse} (${number(item.qty)})`).join(', ')}</div>}</Card>
       if (tab === 'Items') return <Card title="Order Items" subtitle={row.number} bodyClassName="p-0"><div className="overflow-x-auto"><table className="w-full min-w-[520px] text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3 text-left">Product / Service</th><th className="p-3 text-right">Ordered</th><th className="p-3 text-right">Shipped</th><th className="p-3 text-right">Remaining</th><th className="p-3 text-right">Amount</th></tr></thead><tbody><tr className="border-t"><td className="p-3 font-semibold">{row.quote ? `${quotations.find((q) => q.number === row.quote)?.buyer === row.buyer ? 'Wholesale line item' : 'Wholesale line item'}` : 'Wholesale line item'}<small className="ml-2 text-slate-400">{row.supplier} · {row.quote}</small></td><td className="p-3 text-right">{number(row.ordered)}</td><td className="p-3 text-right font-semibold text-brand-700">{number(row.shipped)}</td><td className="p-3 text-right">{number(row.remaining)}</td><td className="p-3 text-right font-semibold">{currency(row.amount)}</td></tr></tbody></table></div></Card>
       if (tab === 'Payments') return <Card title="Payment Schedule" subtitle={row.terms} bodyClassName="p-0">{row.paymentSchedule ? <div className="overflow-x-auto"><table className="w-full min-w-[520px] text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3 text-left">Milestone</th><th className="p-3 text-right">Percentage</th><th className="p-3 text-right">Amount</th><th className="p-3 text-left">Due</th><th className="p-3 text-left">Status</th></tr></thead><tbody>{row.paymentSchedule.map((m, index) => <tr className="border-t" key={index}><td className="p-3 font-semibold">{m.label}</td><td className="p-3 text-right">{m.percent}%</td><td className="p-3 text-right">{currency(m.amount)}</td><td className="p-3">{m.due}</td><td className="p-3"><StatusBadge status={m.status} /></td></tr>)}</tbody></table></div> : <p className="p-5 text-sm text-slate-500">Payment schedule pending.</p>}</Card>
-      if (tab === 'Overview') return <><POOverview><CreditTermsCard used={Math.round((row.amount || 0) * .65)} approved={row.amount || 0} terms={row.terms} /><MilestoneTimeline milestones={row.milestones} /><PaymentSchedule schedule={row.paymentSchedule} /></POOverview><div className="space-y-5">
+      if (tab === 'Overview') return <><POOverview><CreditTermsCard used={Math.round((row.amount || 0) * .65)} approved={row.amount || 0} terms={row.terms} /><MilestoneTimeline milestones={row.milestones} /><PaymentSchedule schedule={row.paymentSchedule} /></POOverview><div className="space-y-5">{fulfillmentCard}
         <Card title="PO Status Timeline" subtitle={row.number} bodyClassName="p-5"><div className="overflow-x-auto pb-1"><Stepper items={poSteps} active={activeIndex} /></div></Card>
         <div className="grid gap-5 lg:grid-cols-3">
           <Card title="Shipment Progress" subtitle={`${number(row.shipped)} of ${number(row.ordered)} units delivered`} bodyClassName="p-5"><div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div><div className="mt-3 flex justify-between text-xs"><span className="text-slate-500">Shipped</span><span className="font-semibold">{pct}%</span></div><div className="mt-4 grid grid-cols-3 gap-2 text-center"><span className="rounded-md bg-slate-50 p-2"><small className="block text-slate-500">Ordered</small><strong>{number(row.ordered)}</strong></span><span className="rounded-md bg-emerald-50 p-2"><small className="block text-emerald-600">Shipped</small><strong className="text-emerald-700">{number(row.shipped)}</strong></span><span className="rounded-md bg-amber-50 p-2"><small className="block text-amber-600">Remaining</small><strong className="text-amber-700">{number(row.remaining)}</strong></span></div>{row.remaining === 0 && <p className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">Order fully shipped.</p>}</Card>
@@ -436,12 +468,11 @@ export default function DetailPage({ type, title }) {
     return null
   })()
 
-  const modals = <></>
   const confirmActions = (() => {
-    if (confirm === 'approve') return { title: 'Approve buyer', message: `Verify ${row.business} and grant full wholesale purchasing access?`, confirmText: 'Approve', onConfirm: () => { bump({ status: 'Approved', verifiedAt: now.split(',')[0] }); setNotice(`${row.business} approved and verified.`) } }
+    if (confirm === 'approve') return { title: 'Approve buyer', message: `Verify ${row.business} and grant full wholesale purchasing access?`, confirmText: 'Approve', onConfirm: () => { const next = decideBuyer(row.id, 'Approved', '', { id: user?.id, name: user?.name, label: user?.label, role: user?.key }); setRow(next); setNotice(`${row.business} approved and verified.`) } }
     if (confirm === 'suspend') return { title: 'Suspend buyer', message: `Suspend ${row.business}? Purchasing will be blocked until reinstated.`, confirmText: 'Suspend', danger: true, onConfirm: () => { bump({ status: 'Suspended' }); setNotice(`${row.business} suspended.`) } }
     if (confirm === 'acceptQuote') return { title: 'Accept quote', message: `Accept ${heading} at ${currency(row.unitPrice)}/unit? A purchase order will be generated from this quote.`, confirmText: 'Accept Quote', onConfirm: acceptQuote }
-    if (confirm === 'rejectQuote') return { title: 'Reject quote', message: `Reject ${heading}? The negotiation thread stays visible on the record.`, confirmText: 'Reject Quote', danger: true, onConfirm: () => { bump({ status: 'Rejected', negotiations: [...(row.negotiations || []), { user: row.buyer.split(' ')[0] === 'Atlas' ? 'Maya Chen' : row.buyer, role: 'Buyer', price: null, quantity: row.quantity, terms: row.terms, comment: 'Quote rejected by buyer.', time: now, status: 'Rejected' }] }); setNotice('Quote rejected.') } }
+    if (confirm === 'rejectQuote') return { title: 'Reject quote', message: `Reject ${heading}? The negotiation thread stays visible on the record.`, confirmText: 'Reject Quote', danger: true, onConfirm: () => { bump({ status: 'Rejected', negotiations: [...(row.negotiations || []), { user: user?.name || 'Current user', role: user?.label || 'Buyer', price: null, quantity: row.quantity, terms: row.terms, comment: 'Quote rejected by buyer.', time: now, status: 'Rejected' }] }); setNotice('Quote rejected.') } }
     if (confirm === 'approveQuote') return { title: 'Approve quote pricing', message: `Approve ${heading}? The discount is within the ${row.approval?.threshold}% threshold review and will be released to the buyer.`, confirmText: 'Approve', onConfirm: () => { bump({ status: 'Sent', approval: { ...row.approval, status: 'Approved' } }); setNotice('Pricing approved. Sent to buyer.') } }
     if (confirm === 'sendQuote') return { title: 'Send quote to buyer', message: `Send ${heading} to ${row.buyer}? The negotiation thread becomes visible to the buyer.`, confirmText: 'Send Quote', onConfirm: () => { bump({ status: 'Sent' }); setNotice('Quote sent to buyer.') } }
     if (confirm === 'ship') return { title: 'Record shipment', message: `Record a shipment of ${number(row.remaining)} remaining units for ${heading}?`, confirmText: 'Record Shipment', onConfirm: () => { const shipped = row.remaining; const milestones = row.milestones.map((m) => { const firstPending = row.milestones.find((x) => x.status === 'Pending'); return m === firstPending ? { ...m, status: 'Completed' } : m }); bump({ shipped: row.shipped + shipped, remaining: 0, status: shipped > 0 && row.shipped === 0 ? 'Partially Shipped' : 'Completed', milestones }); setNotice(`Shipment recorded. ${number(shipped)} units in transit.`) } }
@@ -472,7 +503,7 @@ export default function DetailPage({ type, title }) {
     </div>
     <div className="min-w-0">{panel()}</div>
     <ConfirmDialog open={!!confirm} title={confirmActions?.title || ''} message={confirmActions?.message || ''} confirmText={confirmActions?.confirmText} danger={confirmActions?.danger} onClose={() => setConfirm(null)} onConfirm={() => confirmActions?.onConfirm()} />
-    <Modal open={!!modal} title={modalTitle || ''} onClose={() => setModal(null)} footer={modal === 'counter' || modal === 'reject' || modal === 'requestInfo' || modal === 'note' ? <><button className="btn-secondary" onClick={() => setModal(null)}>Cancel</button><button className="btn-primary" onClick={() => { if (modal === 'counter') { const price = Number(form.price); if (!price) { alert('Enter a proposed price.'); return } bump({ unitPrice: price, quantity: Number(form.quantity) || row.quantity, negotiations: [...(row.negotiations || []), { user: 'Maya Chen', role: 'Buyer', price, quantity: Number(form.quantity) || row.quantity, terms: form.terms, comment: form.comment || 'Counter offer submitted.', time: now, status: 'Countered' }] }); setNotice('Counter offer submitted. Waiting for the account executive.'); } else if (modal === 'reject') { if (!form.reason) { alert('A rejection reason is required.'); return } bump({ status: 'Rejected' }); setNotice(`${row.business} rejected. Reason recorded.`); } else if (modal === 'requestInfo') { if (!form.reason) { alert('Describe what information is missing.'); return } bump({ status: 'Need More Information' }); setNotice('More information requested from buyer.'); } else if (modal === 'note') { if (!form.note) { alert('Write a note.'); return } const notes = [...(row.notes || [])]; notes.push({ author: root === 'admin' ? 'Alex Morgan' : root === 'manager' ? 'Rachel Evans' : 'Daniel Brooks', time: now, body: form.note }); bump({ notes }); setNotice('Internal note added.'); } setModal(null) }}>Confirm</button></> : modal === 'revision' ? null : undefined}>{modalBody}</Modal>
+    <Modal open={!!modal} title={modalTitle || ''} onClose={() => setModal(null)} footer={modal === 'counter' || modal === 'reject' || modal === 'requestInfo' || modal === 'note' ? <><button className="btn-secondary" onClick={() => setModal(null)}>Cancel</button><button className="btn-primary" onClick={() => { if (modal === 'counter') { const price = Number(form.price); if (!price) { alert('Enter a proposed price.'); return } saveCounterOffer({ unitPrice: price, quantity: Number(form.quantity) || row.quantity, terms: form.terms, comment: form.comment || 'Counter offer submitted.' }); } else if (modal === 'reject') { if (!form.reason) { alert('A rejection reason is required.'); return } bump({ status: 'Rejected' }); setNotice(`${row.business} rejected. Reason recorded.`); } else if (modal === 'requestInfo') { if (!form.reason) { alert('Describe what information is missing.'); return } bump({ status: 'Need More Information' }); setNotice('More information requested from buyer.'); } else if (modal === 'note') { if (!form.note) { alert('Write a note.'); return } const notes = [...(row.notes || [])]; notes.push({ author: user?.name || 'Current user', time: now, body: form.note }); bump({ notes }); setNotice('Internal note added.'); } setModal(null) }}>Confirm</button></> : modal === 'revision' ? null : undefined}>{modalBody}</Modal>
   </div>
 }
 
@@ -481,7 +512,5 @@ function PricingSection({ quote }) {
   const unitPrice = quote.unitPrice || quote.amount / quantity
   const listPrice = quote.listPrice || Math.round(unitPrice * 1.12 * 100) / 100
   const subtotal = unitPrice * quantity
-  const shipping = quote.shipping ?? 360
-  const tax = quote.tax ?? Math.round(subtotal * 0.08)
   return <div className="grid gap-5 xl:grid-cols-3"><Card title="Pricing Breakdown" subtitle="Unit pricing across the quote" className="xl:col-span-2" bodyClassName="p-0"><div className="overflow-x-auto"><table className="w-full min-w-[560px]"><thead className="bg-slate-50 text-xs text-slate-500"><tr>{['Quantity', 'List price', 'Offered price', 'Discount', 'Subtotal'].map((x) => <th className="p-3 text-left" key={x}>{x}</th>)}</tr></thead><tbody><tr className="border-t"><td className="p-3 font-semibold">{number(quantity)}</td><td className="p-3 text-slate-400 line-through">{currency(listPrice)}</td><td className="p-3 font-semibold">{currency(unitPrice)}</td><td className="p-3 font-semibold text-brand-700">{Math.round((1 - unitPrice / listPrice) * 1000) / 10}%</td><td className="p-3 font-semibold">{currency(subtotal)}</td></tr></tbody></table></div></Card><Card title="Commercial Summary"><CommercialSummary quote={quote} /></Card></div>
 }

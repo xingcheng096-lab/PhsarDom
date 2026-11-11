@@ -21,7 +21,7 @@ export default function AgingPage() {
   const tableRows = useMemo(() => {
     const labelOf = (due) => { const d = new Date(due); const n = new Date(TODAY); const v = Math.floor((n - d) / 86400000); if (v <= 0) return 'Current'; if (v <= 30) return '1–30 days'; if (v <= 60) return '31–60 days'; if (v <= 90) return '61–90 days'; return '90+ days' }
     return active.map((r) => ({ ...r, bucket: r.status === 'Paid' ? 'Paid' : r.balance <= 0 ? 'Paid' : labelOf(r.due) })).sort((a, b) => orderBucket(a.bucket) - orderBucket(b.bucket))
-  }, [active, rows])
+  }, [active])
 
   function orderBucket(b) { return ['90+ days', '61–90 days', '31–60 days', '1–30 days', 'Current', 'Paid'].indexOf(b) }
 

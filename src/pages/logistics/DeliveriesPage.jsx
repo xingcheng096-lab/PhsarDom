@@ -3,7 +3,7 @@ import { Check, ClipboardCheck, Truck } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
 import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import DataTable from '../../components/tables/DataTable'
-import { Alert, ConfirmDialog, StatusBadge } from '../../components/ui'
+import { Alert, ConfirmDialog } from '../../components/ui'
 import { num, sumBy } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
 

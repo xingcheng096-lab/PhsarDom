@@ -53,7 +53,12 @@ export default function FinanceInvoicesPage() {
   const [notice, setNotice] = useState('')
   const [form, setForm] = useState({ amount: '', method: 'Wire transfer', reference: '' })
 
-  const rows = useMemo(() => [...createdInvoices, ...invoices].map((inv) => invoiceView(inv, erp.invoiceOverrides)), [createdInvoices, erp.invoiceOverrides])
+  const rows = useMemo(() => {
+    const live = (erp.invoices || []).map((inv) => ({ ...inv, number: inv.invoiceNumber, amount: inv.total, paid: inv.amountPaid, due: inv.dueDate, terms: inv.paymentTerms, buyer: inv.buyer, items: inv.lineItems }))
+    const merged = [...createdInvoices, ...live, ...invoices].filter((inv, index, list) => list.findIndex((item) => item.number === inv.number) === index)
+    const scoped = roleKey === 'buyer' ? merged.filter((inv) => String(inv.buyerId) === String(user?.buyerId) || inv.buyer === user?.buyerBusiness) : merged
+    return scoped.map((inv) => invoiceView(inv, erp.invoiceOverrides))
+  }, [createdInvoices, erp.invoiceOverrides, erp.invoices, roleKey, user?.buyerBusiness, user?.buyerId])
   const active = rows.filter((r) => r.status !== 'Cancelled')
   const collected = sumBy(active, (r) => Math.min(r.paid || 0, r.amount))
   const open = sumBy(active, (r) => outstanding(r, {}))
@@ -65,7 +70,7 @@ export default function FinanceInvoicesPage() {
     { key: 'buyer', label: 'Buyer' },
     { key: 'po', label: 'PO' },
     { key: 'amount', label: 'Amount', render: (v) => money(v), className: 'text-right' },
-    { key: 'paid', label: 'Paid', render: (v, row) => money(v || 0), className: 'text-right' },
+    { key: 'paid', label: 'Paid', render: (v, _row) => money(v || 0), className: 'text-right' },
     { key: 'balance', label: 'Balance', render: (v, row) => <span className={outstanding(row, {}) > 0 ? 'text-amber-700' : 'text-emerald-700'}>{money(outstanding(row, {}))}</span>, className: 'text-right' },
     { key: 'due', label: 'Due' },
     { key: 'status', label: 'Status' },
@@ -76,7 +81,9 @@ export default function FinanceInvoicesPage() {
     e.preventDefault()
     const amount = Number(form.amount)
     if (!amount || amount <= 0 || amount > pendingBalance) { setNotice(`Enter a payment amount up to $${pendingBalance.toLocaleString()}.`); return }
-    erp.recordPayment({ invoiceNumber: payFor.number, buyer: payFor.buyer, amount, method: form.method, reference: form.reference || 'REF-DEMO' })
+    const live = (erp.invoices || []).find((inv) => inv.invoiceNumber === payFor.number)
+    const result = live ? erp.recordFinancePayment(live.invoiceId, { amount, paymentMethod: form.method, reference: form.reference || `REF-${Date.now()}` }) : (erp.recordPayment({ invoiceNumber: payFor.number, buyer: payFor.buyer, amount, method: form.method, reference: form.reference || 'REF-DEMO' }), { ok: true })
+    if (!result?.ok) { setNotice(result?.reason || 'Payment could not be recorded.'); return }
     setNotice(`${money(amount)} recorded against ${payFor.number}.`)
     setPayFor(null)
     setForm({ amount: '', method: 'Wire transfer', reference: '' })

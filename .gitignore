@@ -7,3 +7,17 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+.env.*
+!.env.example
+artifacts/
+test-results/
+playwright-report/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/vendor/
+backend/.composer-cache/
+backend/backups/
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/

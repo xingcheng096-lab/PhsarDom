@@ -24,6 +24,7 @@ import { Alert, Card } from "../../components/ui";
 import { buyers, invoices, products, purchaseOrders } from "../../data";
 import { buyerGrowthSeries, categoryRevenue, conversionSeries, inventoryByWarehouse, inventoryValueByProduct, invoiceStatus, orderSeries, receivablesByMonth, revenueSeries } from "../../data/chartData";
 import { currency } from "../../utils/format";
+import { useErp } from "../../services/erpStore";
 
 const cfg = {
   sales: {
@@ -127,13 +128,23 @@ const cfg = {
   },
 };
 export default function ReportPage({ type = "sales" }) {
+  const erp = useErp();
   const c = cfg[type] || cfg.sales;
   const [period, setPeriod] = useState(6);
+  const [filters, setFilters] = useState({ from: '', to: '', buyerId: '', product: '', salesperson: '', status: '' });
   const [notice, setNotice] = useState("");
   const chartData = revenueSeries.slice(-period);
   const revenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
   const orders = chartData.reduce((sum, item) => sum + item.orders, 0);
-  const cards = c.cards.map((card) => card[0] === "Revenue" ? [card[0], currency(revenue), ...card.slice(2)] : card[0] === "Orders" ? [card[0], orders.toLocaleString(), ...card.slice(2)] : card);
+  let report; let filterError = '';
+  try { report = erp.buildSalesReport(filters); } catch (error) { report = erp.buildSalesReport({}); filterError = error.message; }
+  const cards = (type === 'sales' || type === 'executive') ? [
+    ['Confirmed PO Value', currency(report.confirmedPOValue), ShoppingCart, 'blue', null, 'qualifying purchase orders'],
+    ['Invoiced Amount', currency(report.invoicedAmount), FileCheck2, 'violet', null, 'issued invoices'],
+    ['Payments Collected', currency(report.paymentsCollected), CircleDollarSign, 'green', null, 'posted payments'],
+    ['Outstanding Receivables', currency(report.outstandingReceivables), CreditCard, 'amber', null, 'after payments and credits'],
+    ['Quote-to-PO Conversion', `${report.quoteConversion}%`, TrendingUp, 'blue', null, 'accepted quotations'],
+  ] : c.cards.map((card) => card[0] === "Revenue" ? [card[0], currency(revenue), ...card.slice(2)] : card[0] === "Orders" ? [card[0], orders.toLocaleString(), ...card.slice(2)] : card);
   const ranking = type === "buyers" ? buyers : products;
   const exportReport = () => {
     const content = `Period,"Last ${period} months"\nMetric,Value\n${cards.map(([label, value]) => `"${label}","${value}"`).join("\n")}`;
@@ -146,7 +157,7 @@ export default function ReportPage({ type = "sales" }) {
     setNotice("Report CSV downloaded.");
   };
   return (
-    <>
+    <div className="min-w-0 max-w-full overflow-x-hidden">
       <PageHeader
         title={c.title}
         description={`${c.description} Last ${period} months.`}
@@ -161,6 +172,11 @@ export default function ReportPage({ type = "sales" }) {
               <option value="3">Last 3 months</option>
               <option value="6">Last 6 months</option>
             </select>
+            <input aria-label="Report from date" type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="form-control w-full sm:w-40" />
+            <input aria-label="Report to date" type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="form-control w-full sm:w-40" />
+            <select aria-label="Report buyer" value={filters.buyerId} onChange={(e) => setFilters({ ...filters, buyerId: e.target.value })} className="form-control w-full sm:w-44"><option value="">All buyers</option>{buyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.business}</option>)}</select>
+            <input aria-label="Report product" placeholder="Product / SKU" value={filters.product} onChange={(e) => setFilters({ ...filters, product: e.target.value })} className="form-control w-full sm:w-40" />
+            <select aria-label="Report status" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="form-control w-full sm:w-36"><option value="">All statuses</option><option>Approved</option><option>Processing</option><option>Partially Shipped</option><option>Completed</option></select>
             <button className="btn-primary" onClick={exportReport}>
               Export CSV
             </button>
@@ -174,6 +190,7 @@ export default function ReportPage({ type = "sales" }) {
           </Alert>
         </div>
       )}
+      {filterError && <div className="mb-4"><Alert>{filterError}</Alert></div>}
       <div
         className={`grid gap-4 sm:grid-cols-2 ${type === "executive" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}
       >
@@ -238,6 +255,7 @@ export default function ReportPage({ type = "sales" }) {
           ))}
         </Card>
       </div>
-    </>
+      {(type === 'sales' || type === 'executive') && <Card title="Top buyers by confirmed PO value" subtitle="Derived from persisted ERP purchase orders" bodyClassName="mt-5"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b text-xs text-slate-500"><th className="py-2">Buyer</th><th className="py-2 text-right">Orders</th><th className="py-2 text-right">Value</th></tr></thead><tbody>{report.topBuyers.slice(0, 5).map((item) => <tr key={item.buyerId || item.buyer} className="border-b last:border-0"><td className="py-3 font-medium">{item.buyer || item.buyerId}</td><td className="py-3 text-right">{item.orders}</td><td className="py-3 text-right">{currency(item.value)}</td></tr>)}</tbody></table></div></Card>}
+    </div>
   );
 }

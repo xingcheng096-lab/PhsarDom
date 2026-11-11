@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { buyers as seedBuyers } from '../data'
+import { authApi } from './apiClient'
 
 export const ROLES = [
   { key: 'buyer', label: 'Verified Buyer', name: 'Maya Chen', home: '/buyer/dashboard', department: 'Purchasing', origin: 'Customer' },
@@ -27,8 +29,30 @@ function readStored() {
   }
 }
 
+function buyerRecord(id) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('meridian-demo-buyers') || '[]')
+    const storedIds = new Set(stored.map((item) => String(item.id)))
+    return [...stored, ...seedBuyers.filter((item) => !storedIds.has(String(item.id)))].find((item) => String(item.id) === String(id))
+  } catch { return seedBuyers.find((item) => String(item.id) === String(id)) }
+}
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(readStored)
+  const [initializing, setInitializing] = useState(Boolean(import.meta.env.VITE_API_BASE_URL))
+
+  const mapApiUser = (apiUser) => {
+    const apiRole = apiUser?.roles?.[0]?.name || 'buyer'
+    const key = apiRole === 'super_admin' ? 'admin' : apiRole
+    const role = ROLE_MAP[key] || ROLE_MAP.buyer
+    const business = apiUser.buyer_businesses?.[0]
+    return { key, label: role.label, name: apiUser.name, home: role.home, department: role.department, accountId: apiUser.id, email: apiUser.email, buyerId: business?.id, buyerBusiness: business?.legal_name, buyerStatus: business?.status, loginAt: new Date().toISOString() }
+  }
+
+  useEffect(() => {
+    if (!import.meta.env.VITE_API_BASE_URL) return
+    authApi.me().then((response) => setSession(mapApiUser(response.user))).catch(() => setSession(null)).finally(() => setInitializing(false))
+  }, [])
 
   useEffect(() => {
     try {
@@ -39,17 +63,27 @@ export function SessionProvider({ children }) {
     }
   }, [session])
 
-  const login = (key) => {
+  const login = (key, selectedBuyerId) => {
     const role = ROLE_MAP[key]
     if (!role) return null
-    const next = { key, label: role.label, name: role.name, home: role.home, department: role.department, loginAt: new Date().toISOString() }
+    const record = key === 'buyer' ? buyerRecord(selectedBuyerId ?? 1) : null
+    const next = { key, label: role.label, name: role.name, home: role.home, department: role.department, buyerId: key === 'buyer' ? record?.id : undefined, buyerBusiness: key === 'buyer' ? record?.business : undefined, buyerStatus: key === 'buyer' ? record?.status : undefined, loginAt: new Date().toISOString() }
     setSession(next)
     return next
   }
 
+  const loginWithApi = async (credentials) => {
+    const response = await authApi.login(credentials)
+    const next = mapApiUser(response.user)
+    setSession(next)
+    return next
+  }
+
+  const revalidate = () => setSession((current) => { const record = current?.key === 'buyer' ? buyerRecord(current.buyerId) : null; return current?.key === 'buyer' ? { ...current, buyerStatus: record ? record.status : current.buyerStatus } : current })
+  useEffect(() => { const onStorage = () => revalidate(); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage) }, [])
   const logout = () => setSession(null)
 
-  const value = { session, user: session, login, logout, switchTo: login }
+  const value = { session, user: session, initializing, login, loginWithApi, logout, switchTo: login, revalidate }
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
 

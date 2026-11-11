@@ -23,7 +23,7 @@ test('buyer can log in, create an RFQ, and persist it locally', async ({ page })
 
 test('buyer product detail exposes MOQ and tier pricing', async ({ page }) => {
   await page.goto('/products/1')
-  await expect(page.getByText('Minimum order')).toBeVisible()
+  await expect(page.getByText(/Minimum order|MOQ/).first()).toBeVisible()
   await expect(page.getByText('Quantity tier')).toBeVisible()
   await page.getByLabel('Order quantity').fill('100')
   await expect(page.getByText('$82.00')).toBeVisible()
@@ -31,6 +31,11 @@ test('buyer product detail exposes MOQ and tier pricing', async ({ page }) => {
 
 test('buyer quotation can be accepted and persisted as accepted', async ({ page }) => {
   await loginAs(page, 'Verified Buyer')
+  await page.evaluate(() => {
+    const rows = JSON.parse(localStorage.getItem('meridian-demo-quotations') || '[]')
+    const quote = rows.find((row) => row.id === 1) || { id: 1, number: 'QT-2026-0832', buyer: 'Atlas Hospitality Group', quantity: 240, unitPrice: 163, amount: 39120, terms: 'Net-60', status: 'Negotiating' }
+    quote.expiry = '2099-12-31'; quote.approval = { ...(quote.approval || {}), required: true, status: 'Approved' }; localStorage.setItem('meridian-demo-quotations', JSON.stringify([...rows.filter((row) => row.id !== 1), quote]))
+  })
   await page.goto('/buyer/quotations/1')
   await page.getByRole('button', { name: 'Accept & Convert to PO' }).click()
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('meridian-demo-quotations') || '[]'))
@@ -202,7 +207,7 @@ test('finance drafts and approves a credit note', async ({ page }) => {
   await page.goto('/finance/credit-notes')
   await page.getByRole('button', { name: 'New credit note' }).click()
   await page.getByLabel('Invoice').selectOption({ index: 1 })
-  await page.getByLabel('Amount (USD)').fill('10')
+  await page.getByLabel('Credit amount').fill('10')
   await page.getByLabel('Reason').fill('Short shipment adjustment')
   await page.getByRole('button', { name: 'Draft credit note' }).click()
   await expect(page.getByText(/Pending Approval/i).first()).toBeVisible()

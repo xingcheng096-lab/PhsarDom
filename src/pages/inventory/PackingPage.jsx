@@ -3,7 +3,7 @@ import { Box, Check, PackageCheck, Truck } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
 import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import DataTable from '../../components/tables/DataTable'
-import { Alert, Modal, StatusBadge } from '../../components/ui'
+import { Alert, Modal } from '../../components/ui'
 import { num, sumBy } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
 
@@ -29,8 +29,8 @@ export default function PackingPage() {
     { key: 'status', label: 'Status' },
   ]
 
-  const runStart = () => { erp.startPacking(step.id); setNotice(`${step.number} opened on the pack line.`); setAct(null) }
-  const runComplete = () => { erp.completePacking(step.id); setNotice(`${step.number} packed to Ready to Ship — tendered to logistics.`); setAct(null) }
+  const runStart = () => { if (erp.startPacking(step.id) === false) { setNotice('You are not authorized to start packing.'); return } setNotice(`${step.number} opened on the pack line.`); setAct(null) }
+  const runComplete = () => { if (erp.completePacking(step.id) === false) { setNotice('Packing cannot exceed the picked quantity.'); return } setNotice(`${step.number} packed to Ready to Ship — tendered to logistics.`); setAct(null) }
 
   const actions = (row) => {
     if (row.status === 'Waiting') return <button className="btn-primary !px-2.5 !py-1 text-[11px]" onClick={(e) => { e.stopPropagation(); setAct(row) }}><Box size={13} />Start packing</button>

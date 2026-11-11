@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowRight, MapPin, RotateCcw } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
-import { Alert, Card, ConfirmDialog, StatusBadge } from '../../components/ui'
+import { Alert, Card, ConfirmDialog, Modal, StatusBadge, TextInput, Textarea } from '../../components/ui'
 import { shipments as staticShipments } from '../../data'
 import { money, num } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
@@ -22,14 +22,20 @@ export default function ShipmentDetailPage() {
   const erp = useErp()
   const [advance, setAdvance] = useState(null)
   const [notice, setNotice] = useState('')
+  const [podOpen, setPodOpen] = useState(false)
+  const [pod, setPod] = useState({ receiverName: '', deliveredQuantity: '', deliveryDate: '', notes: '', condition: 'Good' })
+  const [discrepancyOpen, setDiscrepancyOpen] = useState(false)
+  const [discrepancy, setDiscrepancy] = useState({ reference: '', missingQuantity: '', damagedQuantity: '', reason: '', notes: '' })
 
+  const live = erp.shipments.find((s) => s.shipmentId === id || s.shipmentNumber === id)
   const plan = erp.plans.find((p) => p.id === Number(id)) || erp.plans.find((p) => p.number === id)
   const stat = staticShipments.find((s) => s.number === id || s.number === String(id))
-  const row = plan || stat
+  const row = live || plan || stat
 
   if (!row) return <div className="surface-card p-10 text-center"><h1 className="text-xl font-semibold">Shipment not found</h1></div>
 
   const isPlan = !!plan
+  const isLive = !!live
   const status = row.status
   const events = plan ? (plan.events || []) : []
   const next = nextStep[status]
@@ -43,6 +49,28 @@ export default function ShipmentDetailPage() {
     erp.cancelPlan(plan.id)
     setNotice(`${plan.number} cancelled — removed from dispatch queue.`)
   }
+
+  const doLiveTransition = (target) => {
+    const result = erp.transitionShipment(live.shipmentId, target)
+    if (!result.ok) { setNotice(result.reason); return }
+    setNotice(`${live.shipmentNumber} updated to ${target}.`)
+  }
+
+  const doPod = (event) => {
+    event.preventDefault()
+    const result = erp.confirmDelivery(live.shipmentId, pod)
+    if (!result.ok) { setNotice(result.reason); return }
+    setNotice(`${live.shipmentNumber} delivery recorded.`)
+    setPodOpen(false)
+  }
+  const doDiscrepancy = (event) => {
+    event.preventDefault()
+    const result = erp.recordShipmentDiscrepancy(live.shipmentId, discrepancy)
+    if (!result.ok) { setNotice(result.reason); return }
+    setNotice(`${live.shipmentNumber} discrepancy recorded.`)
+    setDiscrepancyOpen(false)
+  }
+  const auditEvents = isLive ? erp.audit.filter((event) => event.entityId === live.shipmentId) : []
 
   return (
     <>
@@ -63,6 +91,9 @@ export default function ShipmentDetailPage() {
 
       <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
         <div className="space-y-5">
+          {isLive && <Card title="Shipment reconciliation" bodyClassName="p-5"><div className="grid grid-cols-3 gap-3 text-center text-xs"><span><small className="block text-slate-500">Packed</small><strong>{num(live.packedQuantity)}</strong></span><span><small className="block text-slate-500">Dispatched</small><strong>{num(live.dispatchedQuantity)}</strong></span><span><small className="block text-slate-500">Delivered</small><strong>{num(live.deliveredQuantity)}</strong></span></div><div className="mt-4 flex flex-wrap gap-2">{live.status === 'Ready to Dispatch' && <button className="btn-primary" onClick={() => doLiveTransition('Dispatched')}>Dispatch shipment</button>}{live.status === 'Dispatched' && <button className="btn-primary" onClick={() => doLiveTransition('In Transit')}>Mark in transit</button>}{['In Transit', 'Partially Delivered', 'Delivery Exception'].includes(live.status) && <><button className="btn-success" onClick={() => setPodOpen(true)}>Confirm delivery / POD</button><button className="btn-secondary" onClick={() => setDiscrepancyOpen(true)}>Record discrepancy</button></>}</div>{live.discrepancyRecords?.length > 0 && <div className="mt-4 space-y-2 text-xs">{live.discrepancyRecords.map((item) => <div key={item.reference} className="rounded border border-amber-200 bg-amber-50 p-2"><strong>{item.reference}</strong><span className="ml-2">{item.type}: missing {item.missingQuantity}, damaged {item.damagedQuantity} · {item.reason}</span></div>)}</div>}</Card>}
+          {isLive && <Card title="Status history" bodyClassName="p-5"><ol className="space-y-2 text-xs">{live.statusHistory.map((event, index) => <li key={`${event.timestamp}-${index}`} className="flex justify-between border-b border-slate-100 pb-2"><strong>{event.status}</strong><span className="text-slate-500">{event.actor?.name || event.actor?.id} · {event.timestamp}</span></li>)}</ol></Card>}
+          {isLive && <Card title="Audit timeline" bodyClassName="p-5"><ol className="space-y-2 text-xs">{auditEvents.map((event) => <li key={event.id} className="border-b border-slate-100 pb-2"><strong>{event.action}</strong><span className="ml-2 text-slate-500">{event.actor?.name || event.actor?.id} ({event.actor?.role}) · {event.timestamp}</span><div className="mt-1 text-slate-500">{event.entityType}/{event.entityId}</div></li>)}</ol></Card>}
           {isPlan && events.length > 0 && (
             <Card title="Tracking timeline" subtitle="Advancements logged against this plan" bodyClassName="p-5">
               <ol className="relative ml-5 space-y-4 border-l border-slate-200 pl-6">
@@ -113,6 +144,8 @@ export default function ShipmentDetailPage() {
 
       <ConfirmDialog open={advance?.type !== 'cancel' && !!advance} title={`${advance?.label} · ${plan?.number}`} message={`Advance ${plan?.number} to "${advance?.target}"? The event is appended to the tracking timeline and visible on the register.`} confirmText="Save" onClose={() => setAdvance(null)} onConfirm={doAdvance} />
       <ConfirmDialog open={advance?.type === 'cancel'} title={`Cancel plan · ${plan?.number}`} message={`Cancel ${plan?.number}? Its quantity is released back to the unshipped balance for re-planning.`} confirmText="Cancel plan" danger onClose={() => setAdvance(null)} onConfirm={doCancel} />
+      <Modal open={podOpen} title="Proof of delivery" onClose={() => setPodOpen(false)}><form onSubmit={doPod} className="space-y-3"><TextInput label="Receiver name" required value={pod.receiverName} onChange={(e) => setPod({ ...pod, receiverName: e.target.value })} /><TextInput label="Delivered quantity" type="number" min="1" step="1" required value={pod.deliveredQuantity} onChange={(e) => setPod({ ...pod, deliveredQuantity: e.target.value })} /><TextInput label="Delivery date" type="date" required value={pod.deliveryDate} onChange={(e) => setPod({ ...pod, deliveryDate: e.target.value })} /><TextInput label="Condition" value={pod.condition} onChange={(e) => setPod({ ...pod, condition: e.target.value })} /><Textarea label="Delivery notes" value={pod.notes} onChange={(e) => setPod({ ...pod, notes: e.target.value })} /><div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setPodOpen(false)}>Cancel</button><button className="btn-primary">Save POD</button></div></form></Modal>
+      <Modal open={discrepancyOpen} title="Record delivery discrepancy" onClose={() => setDiscrepancyOpen(false)}><form onSubmit={doDiscrepancy} className="space-y-3"><TextInput label="Reference" required value={discrepancy.reference} onChange={(e) => setDiscrepancy({ ...discrepancy, reference: e.target.value })} /><TextInput label="Missing quantity" type="number" min="0" step="1" value={discrepancy.missingQuantity} onChange={(e) => setDiscrepancy({ ...discrepancy, missingQuantity: e.target.value })} /><TextInput label="Damaged quantity" type="number" min="0" step="1" value={discrepancy.damagedQuantity} onChange={(e) => setDiscrepancy({ ...discrepancy, damagedQuantity: e.target.value })} /><TextInput label="Reason" required value={discrepancy.reason} onChange={(e) => setDiscrepancy({ ...discrepancy, reason: e.target.value })} /><Textarea label="Notes" value={discrepancy.notes} onChange={(e) => setDiscrepancy({ ...discrepancy, notes: e.target.value })} /><div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setDiscrepancyOpen(false)}>Cancel</button><button className="btn-primary">Save discrepancy</button></div></form></Modal>
     </>
   )
 }

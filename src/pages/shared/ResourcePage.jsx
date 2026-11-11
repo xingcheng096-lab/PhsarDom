@@ -39,6 +39,8 @@ import {
 } from "../../data";
 import { resourceSchemas } from "../../data/resourceSchemas";
 import { getStoredRecords, removeRecord, saveRecord } from "../../services/mockStore";
+import { useSession } from "../../services/session";
+import { useErp } from "../../services/erpStore";
 
 const simpleData = {
   categories: [
@@ -625,21 +627,26 @@ export default function ResourcePage({
   const location = useLocation();
   const [params] = useSearchParams();
   const root = location.pathname.split("/")[1];
+  const { user } = useSession();
+  const erp = useErp();
+  const buyerBusiness = user?.buyerBusiness || "Atlas Hospitality Group";
   const schema = resourceSchemas[type];
   const [rows, setRows] = useState(() => getStoredRecords(type, def.rows));
   const [selected, setSelected] = useState(null);
   const [modal, setModal] = useState(null);
   const [viewing, setViewing] = useState(null);
   const [message, setMessage] = useState("");
+  const liveRows = type === "shipments" && erp.shipments.length
+    ? erp.shipments.map((shipment) => ({ ...shipment, id: shipment.shipmentId, number: shipment.shipmentNumber, po: shipment.poId, buyer: shipment.buyerId, tracking: shipment.trackingNumber, dispatch: shipment.dispatchedAt, expected: shipment.estimatedDeliveryDate }))
+    : rows;
   const queryStatus = params.get("status");
   const assigned = params.get("assigned");
   const scopedRows = useMemo(
     () =>
-      rows.filter((row) => {
+      liveRows.filter((row) => {
         if (
           root === "buyer" &&
-          row.buyer &&
-          row.buyer !== "Atlas Hospitality Group"
+          ((type === "shipments" && String(row.buyer) !== String(user?.buyerId)) || (type !== "shipments" && row.buyer && row.buyer !== buyerBusiness))
         )
           return false;
         if (
@@ -662,7 +669,7 @@ export default function ResourcePage({
           return false;
         return true;
       }),
-    [rows, root, type, assigned, filterStatus, params],
+    [liveRows, root, type, assigned, filterStatus, params, buyerBusiness, user?.buyerId],
   );
   const columns = def.columns.map(([key, label], i) => ({
     key,

@@ -1,6 +1,6 @@
 import DashboardLayout from './DashboardLayout'
 import { departmentNav } from '../routes/navigation'
-import { ROLES, ROLE_MAP } from '../services/session'
+import { ROLE_MAP } from '../services/session'
 
 export function FinanceLayout() { const r = ROLE_MAP.finance; return <DashboardLayout navigation={departmentNav.finance} role={r.label} name={r.name} roleKey="finance"/> }
 export function WarehouseLayout() { const r = ROLE_MAP.warehouse; return <DashboardLayout navigation={departmentNav.warehouse} role={r.label} name={r.name} roleKey="warehouse"/> }

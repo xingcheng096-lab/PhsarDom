@@ -134,6 +134,8 @@ export function ProductCard({ product }) {
     0,
     Math.round((1 - product.tiers.at(-1).price / product.price) * 100),
   );
+  const eligible = Number(product.stock || 0) >= Number(product.moq || 1) && Number(product.price || 0) > 0 && product.status !== "Draft";
+  const purchaseIntent = `/buyer/purchase-review?productId=${product.id}&quantity=${product.moq}&purchaseKey=public-${product.id}`;
 
   return (
     <article className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 ease-[cubic-bezier(.2,.8,.2,1)] hover:-translate-y-1 hover:border-brand-300 hover:shadow-xl hover:shadow-slate-200/60">
@@ -191,6 +193,10 @@ export function ProductCard({ product }) {
         <p className="mt-3 rounded-lg bg-brand-50 px-2.5 py-2 text-xs font-medium text-brand-800 transition-colors duration-200 group-hover:bg-brand-100/70">
           Up to {volumeSavings}% savings at volume
         </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Link to={`/login?from=${encodeURIComponent(purchaseIntent)}`} className={`rounded-lg px-3 py-2 text-center text-xs font-bold ${eligible ? "bg-blue-700 text-white hover:bg-blue-800" : "bg-slate-100 text-slate-500"}`}>{eligible ? "Buy Now" : "Unavailable"}</Link>
+          <Link to={`/login?from=${encodeURIComponent(`/buyer/rfqs/new?productId=${product.id}&quantity=${product.moq}`)}`} className="rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-bold text-slate-700 hover:bg-slate-50">Request Quote</Link>
+        </div>
       </div>
     </article>
   );

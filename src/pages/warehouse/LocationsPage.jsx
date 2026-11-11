@@ -4,7 +4,7 @@ import { Boxes, MapPin, Package, Warehouse } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
 import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import { Alert, Card, Modal, StatusBadge } from '../../components/ui'
-import { inventory, warehouses } from '../../data'
+import { warehouses } from '../../data'
 import { num } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
 import { useSession } from '../../services/session'
@@ -18,6 +18,9 @@ export default function LocationsPage() {
   const erp = useErp()
   const [selected, setSelected] = useState(warehouses[0]?.code || 'WHD')
   const [selectedBin, setSelectedBin] = useState(null)
+  const [transfer, setTransfer] = useState({ sourceWarehouse: warehouses[0]?.code || '', destinationWarehouse: warehouses[1]?.code || '', sku: '', quantity: '', transactionId: '' })
+  const [transferNotice, setTransferNotice] = useState('')
+  const [transferBusy, setTransferBusy] = useState(false)
   const wh = warehouses.find((w) => w.code === selected)
   const stock = erp.inventoryOps
   const canReserve = can(roleKey, 'inventory', 'approve')
@@ -26,6 +29,19 @@ export default function LocationsPage() {
   const whBin = (bin) => stock.filter((r) => r.warehouse === wh?.code && r.bin === bin)
   const whBins = [...new Set(stock.filter((r) => r.warehouse === wh?.code).map((r) => r.bin).filter(Boolean))]
   const bins = whBins.length ? whBins : ['A1-01']
+  const transferRows = stock.filter((row) => row.warehouse === transfer.sourceWarehouse && Number(row.available || 0) > 0)
+  const submitTransfer = (event) => {
+    event.preventDefault()
+    if (transfer.sourceWarehouse === transfer.destinationWarehouse) { setTransferNotice('Source and destination warehouses must be different.'); return }
+    const quantity = Number(transfer.quantity)
+    if (!transfer.sku || !Number.isInteger(quantity) || quantity <= 0) { setTransferNotice('Select a product and enter a positive whole quantity.'); return }
+    setTransferBusy(true)
+    const result = erp.transferStock({ ...transfer, quantity, transactionId: transfer.transactionId || undefined }, { actor: user })
+    setTransferBusy(false)
+    if (!result.ok) { setTransferNotice(result.reason); return }
+    setTransferNotice(result.duplicate ? 'Transfer already processed; no duplicate movement created.' : `Transferred ${quantity.toLocaleString()} units successfully.`)
+    if (!result.duplicate) setTransfer((current) => ({ ...current, sku: '', quantity: '', transactionId: '' }))
+  }
   const binScale = (bin) => {
     const rows = whBin(bin)
     if (!rows.length) return 0
@@ -47,6 +63,18 @@ export default function LocationsPage() {
         <InfoBox label="Allocated stock" value={num(stock.reduce((s, r) => s + r.allocated, 0))} icon={Warehouse} tone="violet" context="committed to shipments" />
         <InfoBox label={`Adjust access · ${ownsAdjust || 'Hidden'}`} value={canReserve ? 'Full' : 'View only'} icon={MapPin} tone={canReserve ? 'green' : 'slate'} context="via can()/fieldAccess()" />
       </div>
+
+      <Card title="Warehouse transfer" subtitle="Move available stock between warehouse positions" bodyClassName="p-5">
+        {transferNotice && <Alert onClose={() => setTransferNotice('')}>{transferNotice}</Alert>}
+        <form onSubmit={submitTransfer} className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <label className="text-xs font-semibold text-slate-600">Source warehouse<select className="input mt-1 w-full" value={transfer.sourceWarehouse} onChange={(e) => setTransfer({ ...transfer, sourceWarehouse: e.target.value, sku: '' })}>{warehouses.map((w) => <option key={w.code} value={w.code}>{w.code} · {w.name}</option>)}</select></label>
+          <label className="text-xs font-semibold text-slate-600">Destination warehouse<select className="input mt-1 w-full" value={transfer.destinationWarehouse} onChange={(e) => setTransfer({ ...transfer, destinationWarehouse: e.target.value })}>{warehouses.map((w) => <option key={w.code} value={w.code}>{w.code} · {w.name}</option>)}</select></label>
+          <label className="text-xs font-semibold text-slate-600">Product / SKU<select className="input mt-1 w-full" value={transfer.sku} onChange={(e) => setTransfer({ ...transfer, sku: e.target.value })}><option value="">Select product</option>{transferRows.map((row) => <option key={row.sku} value={row.sku}>{row.sku} · {row.product} · {num(row.available)} available</option>)}</select></label>
+          <label className="text-xs font-semibold text-slate-600">Quantity<input className="input mt-1 w-full" type="number" min="1" step="1" value={transfer.quantity} onChange={(e) => setTransfer({ ...transfer, quantity: e.target.value })} /></label>
+          <label className="text-xs font-semibold text-slate-600">Transfer reference<input className="input mt-1 w-full" placeholder="Optional stable ID" value={transfer.transactionId} onChange={(e) => setTransfer({ ...transfer, transactionId: e.target.value })} /></label>
+          <div className="md:col-span-2 xl:col-span-5 flex justify-end"><button className="btn-primary" disabled={transferBusy || !transfer.sku || transfer.sourceWarehouse === transfer.destinationWarehouse}>{transferBusy ? 'Processing…' : 'Transfer stock'}</button></div>
+        </form>
+      </Card>
 
       <div className="mb-5 flex flex-wrap gap-1.5">
         {warehouses.map((w) => <button key={w.code} onClick={() => setSelected(w.code)} className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${selected === w.code ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>{w.code} · {w.name}</button>)}

@@ -5,17 +5,19 @@ import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import { Alert, Modal, SelectInput, TextInput } from '../../components/ui'
 import { purchaseOrders, shipments as staticShipments } from '../../data'
 import { shipmentQty } from '../../data/erpData'
-import { TODAY, fulfillment, num, poShippedQty } from '../../utils/erp'
+import { TODAY, fulfillment, num } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
 
 export default function ShipmentPlanningPage() {
   const erp = useErp()
   const [notice, setNotice] = useState('')
   const [newPlan, setNewPlan] = useState(false)
+  const [newShipment, setNewShipment] = useState(false)
+  const [shipmentForm, setShipmentForm] = useState({ poId: '', quantity: '', warehouseId: 'WH-CHI-01', carrier: 'TransCon Logistics', trackingNumber: '', transactionId: '' })
   const [form, setForm] = useState({ po: '', qty: '', carrier: 'TransCon Logistics', service: 'Express LTL', eta: '', site: '' })
 
   const shipments = Array.isArray(erp.shipments) ? erp.shipments : staticShipments
-  const plans = Array.isArray(erp.plans) ? erp.plans : []
+  const plans = useMemo(() => Array.isArray(erp.plans) ? erp.plans : [], [erp.plans])
   const soon = plans.filter((p) => p.status === 'Planned' || p.status === 'Dispatched' || p.status === 'Packed')
   const shippedToday = useMemo(() => Object.values(shipmentQty || {}).reduce((total, quantity) => total + Number(quantity || 0), 0), [])
   const remFor = useMemo(() => {
@@ -39,11 +41,22 @@ export default function ShipmentPlanningPage() {
     setForm({ po: '', qty: '', carrier: 'TransCon Logistics', service: 'Express LTL', eta: '', site: '' })
   }
 
+  const doCreateShipment = (e) => {
+    e.preventDefault()
+    const po = purchaseOrders.find((row) => String(row.id) === String(shipmentForm.poId))
+    const persistedPo = erp.purchaseOrders.find((row) => String(row.id) === String(shipmentForm.poId) || row.number === po?.number) || po
+    const packed = erp.packing.find((row) => String(row.po) === String(po?.number) && ['Ready to Ship', 'Packed'].includes(row.status))
+    const result = erp.createShipmentFromPO({ ...shipmentForm, poId: persistedPo?.id, buyerId: persistedPo?.buyerId, shipmentLines: [{ lineId: persistedPo?.lineId || 1, productId: packed?.sku || persistedPo?.sku, quantity: Number(shipmentForm.quantity) }] })
+    if (!result.ok) { setNotice(result.reason); return }
+    setNotice(`${result.shipment.shipmentNumber} created and ready to dispatch.`)
+    setNewShipment(false)
+  }
+
   const options = purchaseOrders.filter((p) => remFor[p.number] > 0)
 
   return (
     <>
-      <PageHeader title="Shipment Planning" description="Create shipment plans against purchase-order balances. Any plan qty automatically reduces the unshipped remainder." actions={<button className="btn-primary" onClick={() => setNewPlan(true)}><Route size={15} />New shipment plan</button>} />
+      <PageHeader title="Shipment Planning" description="Create shipment plans and validated shipments against packed purchase-order quantities." actions={<div className="flex gap-2"><button className="btn-secondary" onClick={() => setNewPlan(true)}><Route size={15} />New shipment plan</button><button className="btn-primary" onClick={() => setNewShipment(true)}><Send size={15} />Create shipment</button></div>} />
       {notice && <div className="mb-4"><Alert onClose={() => setNotice('')}>{notice}</Alert></div>}
 
       <div className="mb-5 rounded-xl border border-sky-100 bg-sky-50/60 p-4 text-sm text-sky-900">
@@ -87,6 +100,17 @@ export default function ShipmentPlanningPage() {
           <TextInput label="ETA" type="date" value={form.eta} onChange={(e) => setForm({ ...form, eta: e.target.value })} />
           <TextInput label="Delivery site" value={form.site} onChange={(e) => setForm({ ...form, site: e.target.value })} placeholder="Consignee site" />
           <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setNewPlan(false)}>Cancel</button><button className="btn-primary"><Route size={14} />Create plan</button></div>
+        </form>
+      </Modal>
+      <Modal open={!!newShipment} title="Create shipment from packed PO" onClose={() => setNewShipment(false)}>
+        <form onSubmit={doCreateShipment} className="space-y-3">
+          <SelectInput label="Purchase order" required value={shipmentForm.poId} onChange={(e) => setShipmentForm({ ...shipmentForm, poId: e.target.value })}><option value="">Select a PO with packed goods...</option>{purchaseOrders.filter((po) => erp.packing.some((row) => String(row.po) === String(po.number) && ['Ready to Ship', 'Packed'].includes(row.status))).map((po) => <option key={po.id} value={po.id}>{po.number} · {po.buyer}</option>)}</SelectInput>
+          <TextInput label="Packed quantity" type="number" min="1" step="1" required value={shipmentForm.quantity} onChange={(e) => setShipmentForm({ ...shipmentForm, quantity: e.target.value })} />
+          <SelectInput label="Warehouse" required value={shipmentForm.warehouseId} onChange={(e) => setShipmentForm({ ...shipmentForm, warehouseId: e.target.value })}><option>WH-CHI-01</option><option>WH-NJ-02</option><option>WH-LA-03</option><option>WH-DAL-04</option></SelectInput>
+          <TextInput label="Carrier" required value={shipmentForm.carrier} onChange={(e) => setShipmentForm({ ...shipmentForm, carrier: e.target.value })} />
+          <TextInput label="Tracking number" required value={shipmentForm.trackingNumber} onChange={(e) => setShipmentForm({ ...shipmentForm, trackingNumber: e.target.value })} />
+          <TextInput label="Transaction reference" required value={shipmentForm.transactionId} onChange={(e) => setShipmentForm({ ...shipmentForm, transactionId: e.target.value })} />
+          <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={() => setNewShipment(false)}>Cancel</button><button className="btn-primary"><Send size={14} />Create shipment</button></div>
         </form>
       </Modal>
     </>

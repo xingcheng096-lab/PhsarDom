@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Minus, Plus, Save } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
 import {
   Alert,
@@ -15,30 +15,52 @@ import {
 } from "../../components/ui";
 import { buyers, products, rfqs, warehouses } from "../../data";
 import { currency } from "../../utils/format";
-import { saveRecord } from "../../services/mockStore";
+import { createQuotation, createRFQ, getStoredRecords, saveRecord } from "../../services/mockStore";
+import { validateQuantity, priceForQuantity } from "../../domain/pricing";
+import { useSession } from "../../services/session";
+import { procurementApi } from "../../services/apiClient";
 
 export function RfqFormPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useSession();
   const [errors, setErrors] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const submit = (e) => {
+  useEffect(() => {
+    const productId = searchParams.get('productId'); const initialProduct = products.find((item) => String(item.id) === String(productId));
+    if (initialProduct) { setSelectedProduct(initialProduct); setQuantity(searchParams.get('quantity') ? Number(searchParams.get('quantity')) : initialProduct.moq); }
+  }, [searchParams]);
+  const submit = async (e) => {
     e.preventDefault();
     if (submitting) return;
+    const storedBuyerRecords = getStoredRecords('buyers', buyers)
+    const buyerRecords = Array.isArray(storedBuyerRecords) ? storedBuyerRecords : buyers
+    const currentBuyer = buyerRecords.find((item) => String(item.id) === String(user?.buyerId))
+    const approvedBuyer = String(user?.buyerStatus).toLowerCase() === 'approved' && String(currentBuyer?.status).toLowerCase() === 'approved'
+    if (user?.key === 'buyer' && !approvedBuyer) return setErrors({ quantity: 'Only an approved buyer can submit a restricted RFQ.' });
     const fd = new FormData(e.currentTarget);
     const quantity = Number(fd.get("quantity"));
     const next = {};
     if (!fd.get("product")) next.product = "Select a product";
-    if (!quantity || quantity < 1) next.quantity = "Enter a valid quantity";
-    if (selectedProduct && quantity < selectedProduct.moq) next.quantity = `Quantity must meet the MOQ of ${selectedProduct.moq}.`;
+     const quantityCheck = validateQuantity(quantity, selectedProduct?.moq || 1);
+     if (!quantityCheck.ok) next.quantity = quantityCheck.reason;
     if (!fd.get("delivery")) next.delivery = "Select a delivery date";
     if (!fd.get("location")) next.location = "Enter a shipping location";
     if (Object.keys(next).length) return setErrors(next);
     setSubmitting(true);
     const values = Object.fromEntries(fd);
-    saveRecord("rfqs", { id: Date.now(), number: `RFQ-2026-${1050 + Math.floor(Date.now() % 100)}`, buyer: "Atlas Hospitality Group", product: values.product, quantity, targetPrice: Number(values.target || 0), delivery: values.delivery, location: values.location, message: values.message, rep: "Unassigned", created: new Date().toISOString().slice(0,10), status: "New" });
-    setTimeout(() => navigate("/buyer/rfqs"), 450);
+     const pricing = priceForQuantity(quantity, selectedProduct);
+     try {
+       if (import.meta.env.VITE_API_BASE_URL) {
+         if (!selectedProduct?.id || !user?.buyerId) throw new Error('The selected product or buyer business is unavailable.')
+         await procurementApi.createRfq({ buyer_business_id: Number(user.buyerId), items: [{ product_id: Number(selectedProduct.id), quantity, target_unit_price: Number(values.target || 0) || null }], message: values.message || null })
+       } else {
+         createRFQ({ id: Date.now(), number: `RFQ-2026-${1050 + Math.floor(Date.now() % 100)}`, buyer: currentBuyer?.business || user?.buyerBusiness, product: values.product, quantity, targetPrice: Number(values.target || 0), baseUnitPrice: pricing.unitPrice, delivery: values.delivery, location: values.location, message: values.message, rep: "Unassigned" }, { id: user?.buyerId, buyerId: user?.buyerId, name: user?.name, role: approvedBuyer ? 'buyer' : user?.key, status: approvedBuyer ? 'Approved' : user?.buyerStatus })
+       }
+     } catch (error) { setErrors({ quantity: error.message }); setSubmitting(false); return }
+    navigate("/buyer/rfqs");
   };
   return (
     <>
@@ -142,6 +164,22 @@ export function RfqFormPage() {
 
 export function QuotationFormPage() {
   const navigate = useNavigate();
+  const { user } = useSession();
+  const [buyerRows, setBuyerRows] = useState(() => getStoredRecords("buyers", buyers));
+  const [rfqRows, setRfqRows] = useState(() => getStoredRecords("rfqs", rfqs));
+  const [selectedBuyerId, setSelectedBuyerId] = useState("");
+  useEffect(() => {
+    const refresh = () => { setBuyerRows(getStoredRecords("buyers", buyers)); setRfqRows(getStoredRecords("rfqs", rfqs)); };
+    refresh();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", refresh);
+    return () => { window.removeEventListener("focus", refresh); window.removeEventListener("pageshow", refresh); };
+  }, []);
+  const availableRfqs = useMemo(() => {
+    if (!selectedBuyerId) return rfqRows;
+    const buyer = buyerRows.find((item) => String(item.id) === String(selectedBuyerId));
+    return rfqRows.filter((item) => String(item.buyerId) === String(selectedBuyerId) || (buyer && item.buyer === buyer.business));
+  }, [buyerRows, rfqRows, selectedBuyerId]);
   const [pricing, setPricing] = useState({
     quantity: 100,
     unitPrice: 89.5,
@@ -152,9 +190,10 @@ export function QuotationFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const subtotal =
     pricing.quantity * pricing.unitPrice * (1 - pricing.discount / 100);
+  const resolveLinks = (values) => ({ buyer: buyerRows.find((item) => String(item.id) === String(values.buyer)), rfq: rfqRows.find((item) => String(item.id) === String(values.rfq)) });
   const update = (key) => (e) =>
     setPricing({ ...pricing, [key]: Math.max(0, Number(e.target.value)) });
-  const saveDraft = (form) => { const values=Object.fromEntries(new FormData(form)); if (!values.buyer || !values.rfq) { setNotice("Select a buyer and RFQ before saving a draft."); return; } saveRecord("quotations", { id:Date.now(), number:`QT-2026-${840 + Math.floor(Date.now()%100)}`, buyer:values.buyer, rfq:values.rfq?.split(" - ")[0], amount:subtotal*1.08+pricing.shipping, discount:pricing.discount, expiry:values.validity, status:"Draft" }); setNotice("Quotation draft saved."); };
+  const saveDraft = (form) => { const values=Object.fromEntries(new FormData(form)); const links=resolveLinks(values); if (!links.buyer || !links.rfq) { setNotice("Select a buyer and RFQ before saving a draft."); return; } try { createQuotation({ id:Date.now(), number:`QT-2026-${840 + Math.floor(Date.now()%100)}`, buyer:links.buyer.business, buyerId:links.buyer.id, rfq:links.rfq.number, rfqId:links.rfq.id, product:links.rfq.product, quantity:pricing.quantity, unitPrice:pricing.unitPrice, amount:subtotal*1.08+pricing.shipping, discount:pricing.discount, expiry:values.validity, status:"Draft" }, { id:user?.key, name:user?.name, role:user?.key }); setNotice("Quotation draft saved."); } catch (error) { setNotice(error.message) } };
   return (
     <>
       <PageHeader
@@ -174,7 +213,8 @@ export function QuotationFormPage() {
           if (submitting) return;
           setSubmitting(true);
           const values=Object.fromEntries(new FormData(e.currentTarget));
-          saveRecord("quotations", { id:Date.now(), number:`QT-2026-${840 + Math.floor(Date.now()%100)}`, buyer:values.buyer, rfq:values.rfq?.split(" - ")[0], product:values.product, quantity:pricing.quantity, unitPrice:pricing.unitPrice, amount:subtotal*1.08+pricing.shipping, discount:pricing.discount, terms:values.paymentTerms, deliveryTerms:values.deliveryTerms, expiry:values.validity, internalNotes:values.internalNotes, status:"Sent" });
+          const links = resolveLinks(values);
+          try { createQuotation({ id:Date.now(), number:`QT-2026-${840 + Math.floor(Date.now()%100)}`, buyer:links.buyer?.business, buyerId:links.buyer?.id, rfq:links.rfq?.number, rfqId:links.rfq?.id, product:links.rfq?.product, quantity:pricing.quantity, unitPrice:pricing.unitPrice, amount:subtotal*1.08+pricing.shipping, discount:pricing.discount, terms:values.paymentTerms, deliveryTerms:values.deliveryTerms, expiry:values.validity, internalNotes:values.internalNotes, status:"Sent" }, { id:user?.key, name:user?.name, role:user?.key }); } catch (error) { setNotice(error.message); setSubmitting(false); return }
           setTimeout(()=>navigate("/sales/quotations"),450);
         }}
         className="space-y-5"
@@ -184,17 +224,17 @@ export function QuotationFormPage() {
           subtitle="Link the quote to an assigned commercial request."
         >
           <div className="grid gap-5 md:grid-cols-2">
-            <SelectInput required name="buyer" label="Buyer">
+            <SelectInput required name="buyer" label="Buyer" value={selectedBuyerId} onChange={(event) => setSelectedBuyerId(event.target.value)}>
               <option value="">Select buyer</option>
-              {buyers.map((b) => (
-                <option key={b.id}>{b.business}</option>
+              {buyerRows.map((b) => (
+                <option key={b.id} value={b.id}>{b.business}</option>
               ))}
             </SelectInput>
             <SelectInput required name="rfq" label="RFQ">
               <option value="">Select request</option>
-              {rfqs.map((r) => (
-                <option key={r.id}>
-                  {r.number} - {r.product}
+              {availableRfqs.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.number} - {r.product} · {r.buyer}
                 </option>
               ))}
             </SelectInput>
@@ -326,10 +366,10 @@ export function ProductFormPage() {
       );
     setSubmitting(true);
     const values=Object.fromEntries(new FormData(e.currentTarget));
-    saveRecord("products", { id:Date.now(), name:values.name, sku:values.sku, category:values.category, description:values.description, status:values.status, price:Number(values.basePrice), moq:Number(values.moq), unit:values.unit, stock:Number(values.stock), warehouse:values.warehouse, bin:values.bin, reorderPoint:Number(values.reorderPoint||0), image:products[0].image, tiers:sorted.map(({id,...tier})=>tier), specifications:specifications.filter((item)=>item.key&&item.value) });
+    saveRecord("products", { id:Date.now(), name:values.name, sku:values.sku, category:values.category, description:values.description, status:values.status, price:Number(values.basePrice), moq:Number(values.moq), unit:values.unit, stock:Number(values.stock), warehouse:values.warehouse, bin:values.bin, reorderPoint:Number(values.reorderPoint||0), image:products[0].image, tiers:sorted.map(({id: _id,...tier})=>tier), specifications:specifications.filter((item)=>item.key&&item.value) });
     setTimeout(()=>navigate("/admin/products"),450);
   };
-  const saveDraft=(form)=>{const values=Object.fromEntries(new FormData(form));saveRecord("products",{id:Date.now(),name:values.name||"Untitled Product",sku:values.sku||`DRAFT-${Date.now()}`,category:values.category,description:values.description,status:"Draft",price:Number(values.basePrice||0),moq:Number(values.moq||1),unit:values.unit||"unit",stock:Number(values.stock||0),image:products[0].image,tiers:tiers.map(({id,...tier})=>tier)});setError("");navigate("/admin/products")};
+  const saveDraft=(form)=>{const values=Object.fromEntries(new FormData(form));saveRecord("products",{id:Date.now(),name:values.name||"Untitled Product",sku:values.sku||`DRAFT-${Date.now()}`,category:values.category,description:values.description,status:"Draft",price:Number(values.basePrice||0),moq:Number(values.moq||1),unit:values.unit||"unit",stock:Number(values.stock||0),image:products[0].image,tiers:tiers.map(({id: _id,...tier})=>tier)});setError("");navigate("/admin/products")};
   return (
     <>
       <PageHeader

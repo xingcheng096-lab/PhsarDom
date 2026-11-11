@@ -3,18 +3,15 @@ import { Check, ClipboardCheck, FlaskConical, Inbox, Truck } from 'lucide-react'
 import PageHeader from '../../components/common/PageHeader'
 import { InfoBox, StatCard } from '../../components/cards/DashboardCards'
 import DataTable from '../../components/tables/DataTable'
-import { Alert, Card, ConfirmDialog, Modal, StatusBadge, TextInput } from '../../components/ui'
+import { Alert, Card, ConfirmDialog, Modal, TextInput } from '../../components/ui'
 import { num, sumBy } from '../../utils/erp'
 import { useErp } from '../../services/erpStore'
-import { useSession } from '../../services/session'
 
 export default function ReceivingPage() {
-  const { user } = useSession()
   const erp = useErp()
   const [notice, setNotice] = useState('')
   const [act, setAct] = useState(null)
   const [qty, setQty] = useState('')
-  const [note, setNote] = useState('')
   const [form, setForm] = useState({ note: '' })
 
   const rows = useMemo(() => [...erp.receiving].reverse(), [erp.receiving])
@@ -36,7 +33,7 @@ export default function ReceivingPage() {
     { key: 'status', label: 'Status' },
   ]
 
-  const openAct = (row, type) => { setAct({ row, type }); setQty(String(row.qty - row.received)); setNote(''); setForm({ note: '' }) }
+  const openAct = (row, type) => { setAct({ row, type }); setQty(String(row.qty - row.received)); setForm({ note: '' }) }
   const step = act?.row
 
   const runInspection = () => {
